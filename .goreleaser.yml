@@ -1,8 +1,4 @@
-# ABOUTME: GoReleaser configuration for pagen releases
-# ABOUTME: Builds multi-platform binaries and creates GitHub releases
 version: 2
-
-project_name: pagen
 
 before:
   hooks:
@@ -10,46 +6,38 @@ before:
     - go test ./...
 
 builds:
-  - id: pagen
-    main: .
-    binary: pagen
-    env:
-      - CGO_ENABLED=1
+  - main: .
+    binary: notes-mcp
     goos:
-      - linux
       - darwin
     goarch:
       - amd64
       - arm64
+    env:
+      - CGO_ENABLED=0
     ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-    # CGO requires separate builds per OS
-    ignore:
-      - goos: linux
-        goarch: arm64
+      - -s -w -X main.version={{.Version}}
 
 archives:
-  - id: pagen
-    format: tar.gz
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- .Version }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-    format_overrides:
-      - goos: windows
-        format: zip
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
-      - README.md
+      - LICENSE*
+      - README*
+      - docs/*
 
-checksum:
-  name_template: 'checksums.txt'
-
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+brews:
+  - repository:
+      owner: harperreed
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/harperreed/notes-mcp"
+    description: "MCP server for Apple Notes with CLI tools"
+    install: |
+      bin.install "notes-mcp"
+    test: |
+      system "#{bin}/notes-mcp", "help"
 
 changelog:
   sort: asc
@@ -58,28 +46,3 @@ changelog:
       - '^docs:'
       - '^test:'
       - '^chore:'
-      - Merge pull request
-      - Merge branch
-
-brews:
-  - name: pagen
-    repository:
-      owner: harperreed
-      name: homebrew-pagen
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
-    homepage: https://github.com/harperreed/pagen
-    description: "Personal Agent Toolkit - CRM with MCP server and CLI"
-    license: MIT
-    test: |
-      system "#{bin}/pagen", "--version"
-    install: |
-      bin.install "pagen"
-
-release:
-  github:
-    owner: harperreed
-    name: pagen
-  draft: false
-  prerelease: auto
-  name_template: "{{.ProjectName}} v{{.Version}}"
