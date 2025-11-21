@@ -1,5 +1,7 @@
 # ABOUTME: GoReleaser configuration for pagen releases
 # ABOUTME: Builds multi-platform binaries and creates GitHub releases
+version: 2
+
 project_name: pagen
 
 before:
