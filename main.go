@@ -27,30 +27,7 @@ func main() {
 
 	// Handle version flag
 	if *showVersion {
-		fmt.Printf("crm-mcp version %s\n", version)
-		os.Exit(0)
-	}
-
-	// Determine database path
-	var finalDBPath string
-	if *dbPath != "" {
-		finalDBPath = *dbPath
-	} else {
-		finalDBPath = filepath.Join(xdg.DataHome, "crm", "crm.db")
-	}
-
-	// Initialize database
-	database, err := db.OpenDatabase(finalDBPath)
-	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
-	}
-	defer database.Close()
-
-	log.Printf("CRM database: %s", finalDBPath)
-
-	// Handle init-only flag
-	if *initOnly {
-		log.Println("Database initialized successfully")
+		fmt.Printf("pagen version %s\n", version)
 		os.Exit(0)
 	}
 
@@ -63,45 +40,85 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Route to command
+	// Route to top-level command
 	command := args[0]
 	commandArgs := args[1:]
 
 	switch command {
 	case "mcp":
-		// Start MCP server
+		// MCP server doesn't need database init message
+		finalDBPath := getDatabasePath(*dbPath)
+		database, err := db.OpenDatabase(finalDBPath)
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
+		defer database.Close()
+
 		if err := cli.MCPCommand(database); err != nil {
 			log.Fatalf("MCP server failed: %v", err)
 		}
 
-	// Contact commands
-	case "add-contact":
-		if err := cli.AddContactCommand(database, commandArgs); err != nil {
-			log.Fatalf("Error: %v", err)
+	case "crm":
+		// CRM subcommands - initialize database with message
+		finalDBPath := getDatabasePath(*dbPath)
+		database, err := db.OpenDatabase(finalDBPath)
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
 		}
-	case "list-contacts":
-		if err := cli.ListContactsCommand(database, commandArgs); err != nil {
-			log.Fatalf("Error: %v", err)
+		defer database.Close()
+
+		log.Printf("CRM database: %s", finalDBPath)
+
+		// Handle init-only flag
+		if *initOnly {
+			log.Println("Database initialized successfully")
+			os.Exit(0)
 		}
 
-	// Company commands
-	case "add-company":
-		if err := cli.AddCompanyCommand(database, commandArgs); err != nil {
-			log.Fatalf("Error: %v", err)
-		}
-	case "list-companies":
-		if err := cli.ListCompaniesCommand(database, commandArgs); err != nil {
-			log.Fatalf("Error: %v", err)
+		if len(commandArgs) == 0 {
+			fmt.Println("Error: crm requires a subcommand")
+			printUsage()
+			os.Exit(1)
 		}
 
-	// Deal commands
-	case "add-deal":
-		if err := cli.AddDealCommand(database, commandArgs); err != nil {
-			log.Fatalf("Error: %v", err)
-		}
-	case "list-deals":
-		if err := cli.ListDealsCommand(database, commandArgs); err != nil {
-			log.Fatalf("Error: %v", err)
+		crmCommand := commandArgs[0]
+		crmArgs := commandArgs[1:]
+
+		switch crmCommand {
+		// Contact commands
+		case "add-contact":
+			if err := cli.AddContactCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "list-contacts":
+			if err := cli.ListContactsCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+
+		// Company commands
+		case "add-company":
+			if err := cli.AddCompanyCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "list-companies":
+			if err := cli.ListCompaniesCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+
+		// Deal commands
+		case "add-deal":
+			if err := cli.AddDealCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "list-deals":
+			if err := cli.ListDealsCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+
+		default:
+			fmt.Printf("Unknown crm command: %s\n\n", crmCommand)
+			printUsage()
+			os.Exit(1)
 		}
 
 	default:
@@ -111,73 +128,82 @@ func main() {
 	}
 }
 
+func getDatabasePath(dbPath string) string {
+	if dbPath != "" {
+		return dbPath
+	}
+	return filepath.Join(xdg.DataHome, "crm", "crm.db")
+}
+
 func printUsage() {
-	fmt.Printf(`crm-mcp v%s - CRM tool with MCP server and CLI
+	fmt.Printf(`pagen v%s - Personal Agent toolkit
 
 USAGE:
-  crm-mcp [global flags] <command> [command flags]
+  pagen [global flags] <command> [subcommand] [flags]
 
 GLOBAL FLAGS:
   --version              Show version and exit
   --db-path <path>       Database path (default: ~/.local/share/crm/crm.db)
-  --init                 Initialize database and exit
+  --init                 Initialize database and exit (use with 'crm')
+
+COMMANDS:
+  mcp                    Start MCP server for Claude Desktop
+  crm                    CRM management commands
 
 MCP SERVER:
-  mcp                    Start MCP server for Claude Desktop (stdio)
+  pagen mcp              Start MCP server (for Claude Desktop integration)
 
-CONTACT COMMANDS:
-  add-contact            Add a new contact
-    --name <name>          Contact name (required)
-    --email <email>        Email address
-    --phone <phone>        Phone number
-    --company <company>    Company name
-    --notes <notes>        Notes about contact
+CRM COMMANDS:
+  pagen crm add-contact     Add a new contact
+    --name <name>             Contact name (required)
+    --email <email>           Email address
+    --phone <phone>           Phone number
+    --company <company>       Company name
+    --notes <notes>           Notes about contact
 
-  list-contacts          List contacts
-    --query <text>         Search by name or email
-    --company <company>    Filter by company name
-    --limit <n>            Max results (default: 50)
+  pagen crm list-contacts   List contacts
+    --query <text>            Search by name or email
+    --company <company>       Filter by company name
+    --limit <n>               Max results (default: 50)
 
-COMPANY COMMANDS:
-  add-company            Add a new company
-    --name <name>          Company name (required)
-    --domain <domain>      Company domain (e.g., acme.com)
-    --industry <industry>  Industry
-    --notes <notes>        Notes about company
+  pagen crm add-company     Add a new company
+    --name <name>             Company name (required)
+    --domain <domain>         Company domain (e.g., acme.com)
+    --industry <industry>     Industry
+    --notes <notes>           Notes about company
 
-  list-companies         List companies
-    --query <text>         Search by name or domain
-    --limit <n>            Max results (default: 50)
+  pagen crm list-companies  List companies
+    --query <text>            Search by name or domain
+    --limit <n>               Max results (default: 50)
 
-DEAL COMMANDS:
-  add-deal               Add a new deal
-    --title <title>        Deal title (required)
-    --company <company>    Company name (required)
-    --amount <cents>       Deal amount in cents
-    --currency <code>      Currency code (default: USD)
-    --stage <stage>        Stage (default: prospecting)
-    --notes <notes>        Initial notes
+  pagen crm add-deal        Add a new deal
+    --title <title>           Deal title (required)
+    --company <company>       Company name (required)
+    --amount <cents>          Deal amount in cents
+    --currency <code>         Currency code (default: USD)
+    --stage <stage>           Stage (default: prospecting)
+    --notes <notes>           Initial notes
 
-  list-deals             List deals
-    --stage <stage>        Filter by stage
-    --company <company>    Filter by company name
-    --limit <n>            Max results (default: 50)
+  pagen crm list-deals      List deals
+    --stage <stage>           Filter by stage
+    --company <company>       Filter by company name
+    --limit <n>               Max results (default: 50)
 
 EXAMPLES:
   # Start MCP server for Claude Desktop
-  crm-mcp mcp
+  pagen mcp
 
   # Add a contact
-  crm-mcp add-contact --name "John Smith" --email "john@acme.com" --company "Acme Corp"
+  pagen crm add-contact --name "John Smith" --email "john@acme.com" --company "Acme Corp"
 
   # List all contacts at Acme Corp
-  crm-mcp list-contacts --company "Acme Corp"
+  pagen crm list-contacts --company "Acme Corp"
 
   # Add a deal
-  crm-mcp add-deal --title "Enterprise License" --company "Acme Corp" --amount 5000000
+  pagen crm add-deal --title "Enterprise License" --company "Acme Corp" --amount 5000000
 
   # List deals in negotiation stage
-  crm-mcp list-deals --stage negotiation
+  pagen crm list-deals --stage negotiation
 
 `, version)
 }

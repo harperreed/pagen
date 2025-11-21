@@ -1,6 +1,6 @@
-# CRM Tool
+# Pagen - Personal Agent Toolkit
 
-A dual-purpose CRM tool that works both as a Model Context Protocol (MCP) server for Claude Desktop AND as a standalone CLI for direct terminal use.
+A personal agent toolkit with CRM capabilities. Works both as a Model Context Protocol (MCP) server for Claude Desktop AND as a standalone CLI for direct terminal use.
 
 ## Features
 
@@ -15,12 +15,12 @@ A dual-purpose CRM tool that works both as a Model Context Protocol (MCP) server
 ### Build from Source
 
 ```bash
-go build -o crm-mcp
+go build -o pagen
 ```
 
 ## Usage
 
-This tool can be used in two ways:
+Pagen can be used in two ways:
 
 ### 1. MCP Server for Claude Desktop
 
@@ -31,8 +31,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "crm": {
-      "command": "/path/to/crm-mcp",
+    "pagen": {
+      "command": "/path/to/pagen",
       "args": ["mcp"]
     }
   }
@@ -47,54 +47,51 @@ Use the CLI directly for quick CRM operations:
 
 ```bash
 # Add a company
-crm-mcp add-company --name "Acme Corp" --industry "Software" --domain "acme.com"
+pagen crm add-company --name "Acme Corp" --industry "Software" --domain "acme.com"
 
 # Add a contact
-crm-mcp add-contact --name "John Smith" --email "john@acme.com" --company "Acme Corp"
+pagen crm add-contact --name "John Smith" --email "john@acme.com" --company "Acme Corp"
 
 # List contacts
-crm-mcp list-contacts
+pagen crm list-contacts
 
 # List contacts at specific company
-crm-mcp list-contacts --company "Acme Corp"
+pagen crm list-contacts --company "Acme Corp"
 
 # Add a deal
-crm-mcp add-deal --title "Enterprise License" --company "Acme Corp" --amount 5000000 --stage "negotiation"
+pagen crm add-deal --title "Enterprise License" --company "Acme Corp" --amount 5000000 --stage "negotiation"
 
 # List deals
-crm-mcp list-deals
+pagen crm list-deals
 
 # List deals in specific stage
-crm-mcp list-deals --stage "negotiation"
+pagen crm list-deals --stage "negotiation"
 
 # List companies
-crm-mcp list-companies
+pagen crm list-companies
 ```
 
 ### Global Flags
 
 - `--version` - Show version and exit
 - `--db-path <path>` - Use custom database path (default: `~/.local/share/crm/crm.db`)
-- `--init` - Initialize database and exit without starting server
+- `--init` - Initialize database and exit (use with `crm` command)
 
-### Available CLI Commands
+### Available Commands
 
-**Company Commands:**
-- `add-company` - Create a new company
-- `list-companies` - List/search companies
+**Top Level:**
+- `pagen mcp` - Start MCP server (for Claude Desktop)
+- `pagen crm` - CRM management commands
 
-**Contact Commands:**
-- `add-contact` - Create a new contact
-- `list-contacts` - List/search contacts
+**CRM Commands:**
+- `pagen crm add-company` - Create a new company
+- `pagen crm list-companies` - List/search companies
+- `pagen crm add-contact` - Create a new contact
+- `pagen crm list-contacts` - List/search contacts
+- `pagen crm add-deal` - Create a new deal
+- `pagen crm list-deals` - List/search deals
 
-**Deal Commands:**
-- `add-deal` - Create a new deal
-- `list-deals` - List/search deals
-
-**MCP Server:**
-- `mcp` - Start MCP server (for Claude Desktop)
-
-Run any command with `--help` for detailed options.
+Run `pagen` without arguments for full help.
 
 ## Database
 
@@ -135,9 +132,11 @@ The server uses SQLite and stores data at:
 ### Query Operations (1 tool)
 - `query_crm` - Universal query across all entity types with flexible filtering
 
-## Example Usage in Claude Desktop
+## Example Usage
 
-Once configured, try these commands:
+### In Claude Desktop (via MCP)
+
+Once configured, try these natural language commands:
 
 ```
 Add a company called Acme Corp in the software industry
@@ -151,6 +150,30 @@ Link John Smith and Jane Doe as colleagues who met at a conference
 Show me all my contacts at Acme Corp
 
 Query all deals in negotiation stage above $10,000
+```
+
+### In Terminal (via CLI)
+
+Quick commands for direct CRM management:
+
+```bash
+# Start fresh
+pagen --db-path ~/my-crm.db --init crm
+
+# Add companies
+pagen crm add-company --name "Acme Corp" --industry "Software"
+pagen crm add-company --name "TechStart" --industry "SaaS"
+
+# Add contacts
+pagen crm add-contact --name "Alice" --email "alice@acme.com" --company "Acme Corp"
+pagen crm add-contact --name "Bob" --email "bob@techstart.io" --company "TechStart"
+
+# Create deals
+pagen crm add-deal --title "Enterprise" --company "Acme Corp" --amount 5000000
+
+# Query data
+pagen crm list-contacts --company "Acme Corp"
+pagen crm list-deals --stage negotiation
 ```
 
 ## Development
