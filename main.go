@@ -14,7 +14,7 @@ import (
 	"github.com/harperreed/crm-mcp/db"
 )
 
-const version = "0.1.0"
+const version = "0.1.1"
 
 func main() {
 	// Global flags
