@@ -12,11 +12,27 @@ A personal agent toolkit with CRM capabilities. Works both as a Model Context Pr
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+```bash
+# Add the tap
+brew tap harperreed/pagen
+
+# Install pagen
+brew install pagen
+```
+
 ### Build from Source
 
 ```bash
+git clone https://github.com/harperreed/pagen.git
+cd pagen
 go build -o pagen
 ```
+
+### Pre-built Binaries
+
+Download the latest release from [GitHub Releases](https://github.com/harperreed/pagen/releases)
 
 ## Usage
 
