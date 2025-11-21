@@ -51,6 +51,16 @@ type DealNote struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Relationship struct {
+	ID               uuid.UUID `json:"id"`
+	ContactID1       uuid.UUID `json:"contact_id_1"`
+	ContactID2       uuid.UUID `json:"contact_id_2"`
+	RelationshipType string    `json:"relationship_type,omitempty"`
+	Context          string    `json:"context,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
 const (
 	StageProspecting   = "prospecting"
 	StageQualification = "qualification"

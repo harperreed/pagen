@@ -63,6 +63,21 @@ CREATE TABLE IF NOT EXISTS deal_notes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_deal_notes_deal_id ON deal_notes(deal_id);
+
+CREATE TABLE IF NOT EXISTS relationships (
+	id TEXT PRIMARY KEY,
+	contact_id_1 TEXT NOT NULL,
+	contact_id_2 TEXT NOT NULL,
+	relationship_type TEXT,
+	context TEXT,
+	created_at DATETIME NOT NULL,
+	updated_at DATETIME NOT NULL,
+	FOREIGN KEY (contact_id_1) REFERENCES contacts(id),
+	FOREIGN KEY (contact_id_2) REFERENCES contacts(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_relationships_contact_1 ON relationships(contact_id_1);
+CREATE INDEX IF NOT EXISTS idx_relationships_contact_2 ON relationships(contact_id_2);
 `
 
 func InitSchema(db *sql.DB) error {
