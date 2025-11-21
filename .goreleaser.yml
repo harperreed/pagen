@@ -7,7 +7,7 @@ before:
 
 builds:
   - main: .
-    binary: notes-mcp
+    binary: pagen
     goos:
       - darwin
     goarch:
@@ -32,12 +32,12 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/harperreed/notes-mcp"
+    homepage: "https://github.com/harperreed/pagen"
     description: "MCP server for Apple Notes with CLI tools"
     install: |
-      bin.install "notes-mcp"
+      bin.install "pagen"
     test: |
-      system "#{bin}/notes-mcp", "help"
+      system "#{bin}/pagen", "help"
 
 changelog:
   sort: asc
