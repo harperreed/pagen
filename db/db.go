@@ -23,6 +23,9 @@ func OpenDatabase(path string) (*sql.DB, error) {
 		return nil, err
 	}
 
+	// Configure connection pool for SQLite (avoid database locked errors)
+	db.SetMaxOpenConns(1)
+
 	// Initialize schema
 	if err := InitSchema(db); err != nil {
 		db.Close()
