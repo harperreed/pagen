@@ -92,14 +92,7 @@ func (h *ResourceHandlers) readContact(idStr string) (*mcp.ReadResourceResult, e
 		return nil, fmt.Errorf("failed to fetch contact: %w", err)
 	}
 
-	// Include interaction history if available
-	var contactData struct {
-		models.Contact
-		LastInteraction *string `json:"last_interaction,omitempty"`
-	}
-	contactData.Contact = *contact
-
-	data, err := json.MarshalIndent(contactData, "", "  ")
+	data, err := json.MarshalIndent(contact, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal contact: %w", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/harperreed/pagen/db"
@@ -270,19 +271,28 @@ func (h *PromptHandlers) getFollowUpSuggestionsPrompt(args map[string]string) (*
 	}
 
 	// Default to 30 days
-	daysSince := "30"
+	daysThreshold := 30
 	if d, ok := args["days_since_contact"]; ok {
-		daysSince = d
+		if parsedDays, err := fmt.Sscanf(d, "%d", &daysThreshold); err != nil || parsedDays != 1 {
+			daysThreshold = 30
+		}
 	}
 
 	var promptText strings.Builder
-	promptText.WriteString(fmt.Sprintf("Contacts that may need follow-up (no contact in %s+ days):\n\n", daysSince))
+	promptText.WriteString(fmt.Sprintf("Contacts that may need follow-up (no contact in %d+ days):\n\n", daysThreshold))
+
+	now := time.Now()
+	threshold := time.Duration(daysThreshold) * 24 * time.Hour
 
 	count := 0
 	for _, contact := range contacts {
-		// Show contacts with no recent interaction or no last_contacted_at
+		// Show contacts with no recent interaction or old last_contacted_at
 		if contact.LastContactedAt == nil {
 			promptText.WriteString(fmt.Sprintf("- %s (never contacted)\n", contact.Name))
+			count++
+		} else if now.Sub(*contact.LastContactedAt) > threshold {
+			daysSince := int(now.Sub(*contact.LastContactedAt).Hours() / 24)
+			promptText.WriteString(fmt.Sprintf("- %s (last contacted %d days ago)\n", contact.Name, daysSince))
 			count++
 		}
 	}
