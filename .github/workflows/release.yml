@@ -12,7 +12,7 @@ permissions:
 jobs:
   release:
     name: Release
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,6 +24,11 @@ jobs:
         with:
           go-version: '1.21'
           cache: true
+
+      - name: Set up Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.11.0
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

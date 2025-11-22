@@ -10,13 +10,37 @@ builds:
     binary: pagen
     goos:
       - darwin
+      - linux
     goarch:
       - amd64
       - arm64
     env:
       - CGO_ENABLED=1
+    flags:
+      - -trimpath
     ldflags:
       - -s -w -X main.version={{.Version}}
+    overrides:
+      - goos: darwin
+        goarch: amd64
+        env:
+          - CGO_ENABLED=1
+          - CC=zig cc -target x86_64-macos
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CGO_ENABLED=1
+          - CC=zig cc -target aarch64-macos
+      - goos: linux
+        goarch: amd64
+        env:
+          - CGO_ENABLED=1
+          - CC=zig cc -target x86_64-linux-gnu
+      - goos: linux
+        goarch: arm64
+        env:
+          - CGO_ENABLED=1
+          - CC=zig cc -target aarch64-linux-gnu
 
 archives:
   - format: tar.gz
