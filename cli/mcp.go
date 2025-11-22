@@ -21,6 +21,8 @@ func MCPCommand(db *sql.DB) error {
 	dealHandlers := handlers.NewDealHandlers(db)
 	relationshipHandlers := handlers.NewRelationshipHandlers(db)
 	queryHandlers := handlers.NewQueryHandlers(db)
+	resourceHandlers := handlers.NewResourceHandlers(db)
+	promptHandlers := handlers.NewPromptHandlers(db)
 
 	// Create MCP server
 	server := mcp.NewServer(&mcp.Implementation{
@@ -93,6 +95,95 @@ func MCPCommand(db *sql.DB) error {
 		Name:        "query_crm",
 		Description: "Universal query tool for flexible filtering across all CRM entity types (contact, company, deal, relationship)",
 	}, queryHandlers.QueryCRM)
+
+	// Register resources
+	server.AddResourceTemplate(&mcp.ResourceTemplate{
+		URITemplate: "crm://contacts/{id}",
+		Name:        "Contact",
+		Description: "Individual contact by ID",
+		MIMEType:    "application/json",
+	}, resourceHandlers.ReadResource)
+
+	server.AddResourceTemplate(&mcp.ResourceTemplate{
+		URITemplate: "crm://companies/{id}",
+		Name:        "Company",
+		Description: "Individual company by ID",
+		MIMEType:    "application/json",
+	}, resourceHandlers.ReadResource)
+
+	server.AddResourceTemplate(&mcp.ResourceTemplate{
+		URITemplate: "crm://deals/{id}",
+		Name:        "Deal",
+		Description: "Individual deal by ID",
+		MIMEType:    "application/json",
+	}, resourceHandlers.ReadResource)
+
+	server.AddResource(&mcp.Resource{
+		URI:         "crm://contacts",
+		Name:        "All Contacts",
+		Description: "List of all contacts",
+		MIMEType:    "application/json",
+	}, resourceHandlers.ReadResource)
+
+	server.AddResource(&mcp.Resource{
+		URI:         "crm://companies",
+		Name:        "All Companies",
+		Description: "List of all companies",
+		MIMEType:    "application/json",
+	}, resourceHandlers.ReadResource)
+
+	server.AddResource(&mcp.Resource{
+		URI:         "crm://deals",
+		Name:        "All Deals",
+		Description: "List of all deals",
+		MIMEType:    "application/json",
+	}, resourceHandlers.ReadResource)
+
+	server.AddResource(&mcp.Resource{
+		URI:         "crm://pipeline",
+		Name:        "Deal Pipeline",
+		Description: "Deal pipeline summary",
+		MIMEType:    "application/json",
+	}, resourceHandlers.ReadResource)
+
+	// Register prompts
+	server.AddPrompt(&mcp.Prompt{
+		Name:        "contact-summary",
+		Description: "Generate a comprehensive summary of a contact",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "contact_id", Description: "UUID of the contact", Required: true},
+		},
+	}, promptHandlers.GetPrompt)
+
+	server.AddPrompt(&mcp.Prompt{
+		Name:        "deal-analysis",
+		Description: "Analyze the current deal pipeline",
+	}, promptHandlers.GetPrompt)
+
+	server.AddPrompt(&mcp.Prompt{
+		Name:        "relationship-map",
+		Description: "Map out relationships for a contact or company",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "entity_type", Description: "Type: 'contact' or 'company'", Required: true},
+			{Name: "entity_id", Description: "UUID of the entity", Required: true},
+		},
+	}, promptHandlers.GetPrompt)
+
+	server.AddPrompt(&mcp.Prompt{
+		Name:        "follow-up-suggestions",
+		Description: "Suggest contacts to follow up with",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "days_since_contact", Description: "Days since last contact (default: 30)", Required: false},
+		},
+	}, promptHandlers.GetPrompt)
+
+	server.AddPrompt(&mcp.Prompt{
+		Name:        "company-overview",
+		Description: "Complete overview of a company",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "company_id", Description: "UUID of the company", Required: true},
+		},
+	}, promptHandlers.GetPrompt)
 
 	// Run server on stdio transport
 	ctx := context.Background()
