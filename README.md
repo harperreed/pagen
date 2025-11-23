@@ -55,9 +55,28 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-Then restart Claude Desktop and you'll have access to all 13 CRM tools through natural language.
+Then restart Claude Desktop and you'll have access to all 19 CRM tools through natural language.
 
-### 2. CLI for Direct Terminal Use
+### 2. Interactive TUI (Default)
+
+Launch the full-screen interactive terminal interface:
+
+```bash
+pagen
+```
+
+Features:
+- **Tab** - Switch between Contacts/Companies/Deals
+- **Arrow keys** - Navigate rows
+- **Enter** - View details
+- **n** - Create new entity
+- **e** - Edit selected entity
+- **d** - Delete selected entity
+- **g** - View graph for entity
+- **/** - Search/filter
+- **q** - Quit
+
+### 3. CLI for Direct Terminal Use
 
 Use the CLI directly for quick CRM operations:
 
@@ -87,6 +106,89 @@ pagen crm list-deals --stage "negotiation"
 pagen crm list-companies
 ```
 
+## Visualization Features
+
+### Terminal Dashboard
+
+View a static ASCII dashboard with pipeline overview, stats, and alerts:
+
+```bash
+pagen viz
+```
+
+Output:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PAGEN CRM DASHBOARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PIPELINE OVERVIEW
+  prospecting    ████░░░░░░  12 ($45K)
+  qualification  ██████░░░░  18 ($120K)
+  negotiation    ████████░░   8 ($250K)
+
+STATS
+  📇 45 contacts  🏢 12 companies  💼 43 deals
+
+NEEDS ATTENTION
+  ⚠️  8 contacts - no contact in 30+ days
+  ⚠️  3 deals - stale (no activity in 14+ days)
+```
+
+### Read-Only Web UI
+
+Start the web dashboard server:
+
+```bash
+pagen web [--port 8080]
+```
+
+Visit `http://localhost:8080` in your browser.
+
+Pages:
+- `/` - Dashboard with stats and pipeline
+- `/contacts` - Searchable contacts table
+- `/companies` - Companies with org charts
+- `/deals` - Deals with stage filtering
+- `/graphs` - Interactive graph generation
+
+All pages use HTMX for partial updates (no full page reloads).
+
+### GraphViz Visualizations
+
+Generate relationship graphs in DOT format:
+
+```bash
+# All contact relationships
+pagen viz graph contacts
+
+# Specific contact's network
+pagen viz graph contacts <contact-id>
+
+# Company org chart
+pagen viz graph company <company-id-or-name>
+
+# Deal pipeline flow
+pagen viz graph pipeline
+```
+
+Save to file:
+```bash
+pagen viz graph contacts > graph.dot
+dot -Tsvg graph.dot -o graph.svg
+```
+
+## Updated Command Structure
+
+```
+pagen                          # Launch interactive TUI (default)
+pagen crm <command> [args]     # CLI commands for scripting
+pagen mcp                      # MCP server for Claude Desktop
+pagen viz                      # Terminal dashboard
+pagen viz graph <type> [args]  # Generate GraphViz graphs
+pagen web [--port 8080]        # Web UI server
+```
+
 ### Global Flags
 
 - `--version` - Show version and exit
@@ -96,18 +198,60 @@ pagen crm list-companies
 ### Available Commands
 
 **Top Level:**
+- `pagen` - Launch interactive TUI (default)
 - `pagen mcp` - Start MCP server (for Claude Desktop)
 - `pagen crm` - CRM management commands
+- `pagen viz` - Terminal dashboard
+- `pagen viz graph` - Generate GraphViz visualizations
+- `pagen web` - Start web UI server
 
-**CRM Commands:**
-- `pagen crm add-company` - Create a new company
-- `pagen crm list-companies` - List/search companies
-- `pagen crm add-contact` - Create a new contact
-- `pagen crm list-contacts` - List/search contacts
-- `pagen crm add-deal` - Create a new deal
-- `pagen crm list-deals` - List/search deals
+Run `pagen --help` for full help.
 
-Run `pagen` without arguments for full help.
+## Complete CRUD Operations
+
+### Contacts
+
+```bash
+pagen crm add-contact --name "Alice" --email "alice@example.com" [--phone "555-1234"] [--company "CompanyName"] [--notes "Notes"]
+pagen crm find-contacts [--query "search"] [--company-id <uuid>]
+pagen crm update-contact <id> [--name "New Name"] [--email "new@email.com"] [--phone "555-5678"] [--company "NewCompany"] [--notes "Updated notes"]
+pagen crm delete-contact <id>
+pagen crm log-interaction --contact <name-or-id> [--note "Met for coffee"]
+```
+
+### Companies
+
+```bash
+pagen crm add-company --name "Acme Corp" [--domain "acme.com"] [--industry "Software"] [--notes "Notes"]
+pagen crm find-companies [--query "search"]
+pagen crm update-company <id> [--name "New Name"] [--domain "newdomain.com"] [--industry "NewIndustry"] [--notes "Updated notes"]
+pagen crm delete-company <id>  # Fails if company has active deals
+```
+
+### Deals
+
+```bash
+pagen crm add-deal --title "Enterprise License" --company "Acme Corp" [--contact "Alice"] [--amount 500000] [--currency USD] [--stage prospecting] [--note "Initial outreach"]
+pagen crm find-deals [--query "search"]
+pagen crm update-deal <id> [--title "New Title"] [--stage negotiation] [--amount 600000]
+pagen crm delete-deal <id>  # Cascades to deal notes
+pagen crm add-deal-note --deal <id> --note "Follow-up completed"
+```
+
+### Relationships
+
+```bash
+pagen crm link-contacts --contact1 <id-or-name> --contact2 <id-or-name> [--type "colleague"] [--context "Work together"]
+pagen crm find-relationships --contact <id> [--type "colleague"]
+pagen crm update-relationship <id> [--type "friend"] [--context "Updated context"]
+pagen crm delete-relationship <id>
+```
+
+### Query (MCP-style)
+
+```bash
+pagen crm query --entity-type <contact|company|deal|relationship> [--query "search"] [--limit 50]
+```
 
 ## Database
 
@@ -123,30 +267,40 @@ The server uses SQLite and stores data at:
 - **deal_notes** - Activity logs on deals
 - **relationships** - Bidirectional connections between contacts
 
-## MCP Tools (13 Total)
+## MCP Tools
 
-### Contact Operations (4 tools)
+Total: **19 tools** for Claude Desktop integration
+
+### Contact Operations (5 tools)
 - `add_contact` - Create new contacts with optional company linking
 - `find_contacts` - Search by name, email, or company
 - `update_contact` - Modify contact information
+- `delete_contact` - Delete a contact and all associated relationships
 - `log_contact_interaction` - Record interactions with timestamp tracking
 
-### Company Operations (2 tools)
+### Company Operations (4 tools)
 - `add_company` - Create companies with industry/domain metadata
 - `find_companies` - Search by name or domain
+- `update_company` - Modify company information
+- `delete_company` - Delete a company (must have no active deals)
 
-### Deal Operations (3 tools)
+### Deal Operations (4 tools)
 - `create_deal` - Create deals with company and contact associations
 - `update_deal` - Modify deal details including stage and amount
+- `delete_deal` - Delete a deal and all associated notes
 - `add_deal_note` - Add activity notes to deals
 
-### Relationship Operations (3 tools)
+### Relationship Operations (4 tools)
 - `link_contacts` - Create relationships between contacts
 - `find_contact_relationships` - Find all connections for a contact
+- `update_relationship` - Update a relationship's type and context
 - `remove_relationship` - Delete relationship links
 
 ### Query Operations (1 tool)
 - `query_crm` - Universal query across all entity types with flexible filtering
+
+### Visualization Operations (1 tool)
+- `generate_graph` - Generate GraphViz DOT for contact networks, company org charts, or deal pipelines
 
 ## Example Usage
 
@@ -192,6 +346,34 @@ pagen crm list-contacts --company "Acme Corp"
 pagen crm list-deals --stage negotiation
 ```
 
+## Architecture
+
+**Single Binary Distribution:**
+- All templates embedded via `go:embed`
+- No external files required
+- Pure Go dependencies only
+
+**Technology Stack:**
+- Database: SQLite with CGO
+- TUI: bubbletea + lipgloss
+- Web: Go templates + HTMX (CDN) + Tailwind (CDN)
+- GraphViz: goccy/go-graphviz (pure Go)
+- MCP: Claude Agent SDK
+
+## Testing
+
+Run all scenario tests:
+
+```bash
+make test
+./.scratch/test_all_visualization.sh
+./.scratch/test_integration.sh
+```
+
+Manual testing:
+- TUI: `./.scratch/test_tui_manual.sh`
+- Web: `./.scratch/test_web_manual.sh`
+
 ## Development
 
 ### Running Tests
@@ -209,13 +391,6 @@ go test ./... -cover
 ## Version
 
 Current version: 0.1.0
-
-## Architecture
-
-- **Language:** Go 1.21+
-- **Database:** SQLite with WAL mode
-- **MCP SDK:** github.com/modelcontextprotocol/go-sdk v1.1.0
-- **Storage:** XDG Base Directory specification
 
 ## License
 
