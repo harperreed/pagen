@@ -198,7 +198,11 @@ func (m Model) handleDetailKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// TODO: Show delete confirmation
 	case "g":
 		m.viewMode = ViewGraph
-		// TODO: Generate graph DOT
+		err := m.generateGraph()
+		if err != nil {
+			m.err = err
+			m.viewMode = ViewDetail
+		}
 	}
 
 	return m, nil

@@ -141,13 +141,3 @@ var (
 			Foreground(lipgloss.Color("240")).
 			MarginTop(1)
 )
-
-// Stub methods for views - to be implemented in subsequent tasks
-func (m Model) renderGraphView() string {
-	return "Graph view - not yet implemented"
-}
-
-// Stub methods for key handlers - to be implemented in subsequent tasks
-func (m Model) handleGraphKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	return m, nil
-}
