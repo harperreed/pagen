@@ -22,7 +22,11 @@
     </nav>
 
     <main class="container mx-auto p-6">
-        {{template "content" .}}
+        {{if eq .ContentTemplate "dashboard-content"}}{{template "dashboard-content" .}}{{end}}
+        {{if eq .ContentTemplate "contacts-content"}}{{template "contacts-content" .}}{{end}}
+        {{if eq .ContentTemplate "companies-content"}}{{template "companies-content" .}}{{end}}
+        {{if eq .ContentTemplate "deals-content"}}{{template "deals-content" .}}{{end}}
+        {{if eq .ContentTemplate "graphs-content"}}{{template "graphs-content" .}}{{end}}
     </main>
 
     <footer class="bg-gray-800 text-white p-4 mt-12">

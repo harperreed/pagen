@@ -34,7 +34,7 @@ func NewServer(database *sql.DB) (*Server, error) {
 			}
 			return a / b
 		},
-		"multiply": func(a, b int) int {
+		"multiply": func(a, b int64) int64 {
 			return a * b
 		},
 	}
@@ -78,17 +78,18 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Stats": stats,
-		"Title": "Dashboard",
+		"Stats":           stats,
+		"Title":           "Dashboard",
+		"ContentTemplate": "dashboard-content",
 	}
 
-	s.renderTemplate(w, "dashboard.html", data)
+	s.renderTemplate(w, "layout.html", data)
 }
 
 func (s *Server) renderTemplate(w http.ResponseWriter, name string, data interface{}) {
-	// The templates are parsed together - dashboard.html defines "content"
-	// and layout.html uses it, so we execute layout.html
-	err := s.templates.ExecuteTemplate(w, "layout.html", data)
+	// Execute the specified template (usually layout.html)
+	// The data map includes ContentTemplate to specify which content block to render
+	err := s.templates.ExecuteTemplate(w, name, data)
 	if err != nil {
 		log.Printf("Template error rendering %s: %v", name, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -131,11 +132,12 @@ func (s *Server) handleContacts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Contacts": contactViews,
-		"Title":    "Contacts",
+		"Contacts":        contactViews,
+		"Title":           "Contacts",
+		"ContentTemplate": "contacts-content",
 	}
 
-	s.renderTemplate(w, "contacts.html", data)
+	s.renderTemplate(w, "layout.html", data)
 }
 
 func (s *Server) handleCompanies(w http.ResponseWriter, r *http.Request) {
@@ -147,11 +149,12 @@ func (s *Server) handleCompanies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Companies": companies,
-		"Title":     "Companies",
+		"Companies":       companies,
+		"Title":           "Companies",
+		"ContentTemplate": "companies-content",
 	}
 
-	s.renderTemplate(w, "companies.html", data)
+	s.renderTemplate(w, "layout.html", data)
 }
 
 func (s *Server) handleDeals(w http.ResponseWriter, r *http.Request) {
@@ -204,11 +207,12 @@ func (s *Server) handleDeals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Deals": dealViews,
-		"Title": "Deals",
+		"Deals":           dealViews,
+		"Title":           "Deals",
+		"ContentTemplate": "deals-content",
 	}
 
-	s.renderTemplate(w, "deals.html", data)
+	s.renderTemplate(w, "layout.html", data)
 }
 
 func (s *Server) handleContactDetail(w http.ResponseWriter, r *http.Request) {
@@ -307,10 +311,11 @@ func (s *Server) handleDealDetail(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGraphs(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
-		"Title": "Graphs",
+		"Title":           "Graphs",
+		"ContentTemplate": "graphs-content",
 	}
 
-	s.renderTemplate(w, "graphs.html", data)
+	s.renderTemplate(w, "layout.html", data)
 }
 
 func (s *Server) handleGraphPartial(w http.ResponseWriter, r *http.Request) {
