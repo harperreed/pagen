@@ -151,6 +151,62 @@ func main() {
 			os.Exit(1)
 		}
 
+	case "viz":
+		// Visualization subcommands
+		finalDBPath := getDatabasePath(*dbPath)
+		database, err := db.OpenDatabase(finalDBPath)
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
+		defer database.Close()
+
+		log.Printf("CRM database: %s", finalDBPath)
+
+		if len(commandArgs) == 0 {
+			fmt.Println("Error: viz requires a subcommand")
+			printUsage()
+			os.Exit(1)
+		}
+
+		vizCommand := commandArgs[0]
+		vizArgs := commandArgs[1:]
+
+		switch vizCommand {
+		case "graph":
+			if len(vizArgs) == 0 {
+				fmt.Println("Error: viz graph requires a type (contacts, company, or pipeline)")
+				printUsage()
+				os.Exit(1)
+			}
+
+			graphType := vizArgs[0]
+			graphArgs := vizArgs[1:]
+
+			switch graphType {
+			case "contacts":
+				if err := cli.VizGraphContactsCommand(database, graphArgs); err != nil {
+					log.Fatalf("Error: %v", err)
+				}
+			case "company":
+				if err := cli.VizGraphCompanyCommand(database, graphArgs); err != nil {
+					log.Fatalf("Error: %v", err)
+				}
+			case "pipeline":
+				if err := cli.VizGraphPipelineCommand(database, graphArgs); err != nil {
+					log.Fatalf("Error: %v", err)
+				}
+			default:
+				fmt.Printf("Unknown graph type: %s\n\n", graphType)
+				printUsage()
+				os.Exit(1)
+			}
+
+		default:
+			fmt.Printf("Unknown viz command: %s\n\n", vizCommand)
+			printUsage()
+			os.Exit(1)
+		}
+
 	default:
 		fmt.Printf("Unknown command: %s\n\n", command)
 		printUsage()
@@ -179,6 +235,7 @@ GLOBAL FLAGS:
 COMMANDS:
   mcp                    Start MCP server for Claude Desktop
   crm                    CRM management commands
+  viz                    Visualization commands
 
 MCP SERVER:
   pagen mcp              Start MCP server (for Claude Desktop integration)
@@ -237,6 +294,17 @@ CRM COMMANDS:
     Note: flags must come before the relationship ID
 
   pagen crm delete-relationship <id>  Delete a relationship
+
+VIZ COMMANDS:
+  pagen viz graph contacts [id]  Generate contact relationship network
+    --output <file>               Output file (default: stdout)
+    [id]                          Optional contact ID to center graph on
+
+  pagen viz graph company <id>   Generate company org chart
+    --output <file>               Output file (default: stdout)
+
+  pagen viz graph pipeline       Generate deal pipeline graph
+    --output <file>               Output file (default: stdout)
 
 EXAMPLES:
   # Start MCP server for Claude Desktop
