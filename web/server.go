@@ -86,10 +86,13 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) renderTemplate(w http.ResponseWriter, name string, data interface{}) {
-	err := s.templates.ExecuteTemplate(w, name, data)
+	// The templates are parsed together - dashboard.html defines "content"
+	// and layout.html uses it, so we execute layout.html
+	err := s.templates.ExecuteTemplate(w, "layout.html", data)
 	if err != nil {
-		log.Printf("Template error: %v", err)
+		log.Printf("Template error rendering %s: %v", name, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
