@@ -5,9 +5,11 @@ package viz
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/harperreed/pagen/db"
+	"github.com/harperreed/pagen/models"
 )
 
 type DashboardStats struct {
@@ -119,4 +121,81 @@ func GenerateDashboardStats(database *sql.DB) (*DashboardStats, error) {
 	}
 
 	return stats, nil
+}
+
+func RenderDashboard(stats *DashboardStats) string {
+	var out strings.Builder
+
+	// Header
+	out.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	out.WriteString("  PAGEN CRM DASHBOARD\n")
+	out.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+
+	// Pipeline overview
+	out.WriteString("PIPELINE OVERVIEW\n")
+	renderPipeline(&out, stats.PipelineByStage)
+	out.WriteString("\n")
+
+	// Stats
+	out.WriteString("STATS\n")
+	out.WriteString(fmt.Sprintf("  📇 %d contacts  🏢 %d companies  💼 %d deals\n\n",
+		stats.TotalContacts, stats.TotalCompanies, stats.TotalDeals))
+
+	// Needs attention
+	if len(stats.StaleContacts) > 0 || len(stats.StaleDeals) > 0 {
+		out.WriteString("NEEDS ATTENTION\n")
+
+		if len(stats.StaleContacts) > 0 {
+			out.WriteString(fmt.Sprintf("  ⚠️  %d contacts - no contact in 30+ days\n", len(stats.StaleContacts)))
+		}
+
+		if len(stats.StaleDeals) > 0 {
+			out.WriteString(fmt.Sprintf("  ⚠️  %d deals - stale (no activity in 14+ days)\n", len(stats.StaleDeals)))
+		}
+	}
+
+	return out.String()
+}
+
+func renderPipeline(out *strings.Builder, pipeline map[string]PipelineStageStats) {
+	// Define stage order
+	stages := []string{
+		models.StageProspecting,
+		models.StageQualification,
+		models.StageProposal,
+		models.StageNegotiation,
+		models.StageClosedWon,
+		models.StageClosedLost,
+	}
+
+	// Find max count for scaling
+	maxCount := 0
+	for _, pstats := range pipeline {
+		if pstats.Count > maxCount {
+			maxCount = pstats.Count
+		}
+	}
+	if maxCount == 0 {
+		maxCount = 1
+	}
+
+	// Render each stage
+	for _, stage := range stages {
+		pstats, exists := pipeline[stage]
+		if !exists {
+			continue
+		}
+
+		// Calculate bar length (0-10 blocks)
+		barLength := (pstats.Count * 10) / maxCount
+
+		// Build bar
+		bar := strings.Repeat("█", barLength) + strings.Repeat("░", 10-barLength)
+
+		// Format amount in K
+		amountK := pstats.Amount / 100000
+
+		out.WriteString(fmt.Sprintf("  %-13s %s  %2d ($%dK)\n",
+			stage, bar, pstats.Count, amountK))
+	}
 }
