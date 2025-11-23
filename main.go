@@ -94,6 +94,14 @@ func main() {
 			if err := cli.ListContactsCommand(database, crmArgs); err != nil {
 				log.Fatalf("Error: %v", err)
 			}
+		case "update-contact":
+			if err := cli.UpdateContactCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "delete-contact":
+			if err := cli.DeleteContactCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
 
 		// Company commands
 		case "add-company":
@@ -165,6 +173,16 @@ CRM COMMANDS:
     --query <text>            Search by name or email
     --company <company>       Filter by company name
     --limit <n>               Max results (default: 50)
+
+  pagen crm update-contact [flags] <id>  Update an existing contact
+    --name <name>             Contact name
+    --email <email>           Email address
+    --phone <phone>           Phone number
+    --company <company>       Company name
+    --notes <notes>           Notes about contact
+    Note: flags must come before the contact ID
+
+  pagen crm delete-contact <id>  Delete a contact
 
   pagen crm add-company     Add a new company
     --name <name>             Company name (required)

@@ -132,3 +132,90 @@ func ListContactsCommand(database *sql.DB, args []string) error {
 	fmt.Printf("\nTotal: %d contact(s)\n", len(contacts))
 	return nil
 }
+
+// UpdateContactCommand updates an existing contact
+func UpdateContactCommand(database *sql.DB, args []string) error {
+	fs := flag.NewFlagSet("update-contact", flag.ExitOnError)
+	name := fs.String("name", "", "Contact name")
+	email := fs.String("email", "", "Email address")
+	phone := fs.String("phone", "", "Phone number")
+	company := fs.String("company", "", "Company name")
+	notes := fs.String("notes", "", "Notes about the contact")
+	_ = fs.Parse(args)
+
+	// First positional arg is the contact ID
+	if len(fs.Args()) < 1 {
+		return fmt.Errorf("contact ID is required")
+	}
+
+	contactID, err := uuid.Parse(fs.Args()[0])
+	if err != nil {
+		return fmt.Errorf("invalid contact ID: %w", err)
+	}
+
+	// Get existing contact
+	existing, err := db.GetContact(database, contactID)
+	if err != nil {
+		return fmt.Errorf("contact not found: %w", err)
+	}
+	if existing == nil {
+		return fmt.Errorf("contact not found: %s", contactID)
+	}
+
+	// Apply updates from flags
+	if *name != "" {
+		existing.Name = *name
+	}
+	if *email != "" {
+		existing.Email = *email
+	}
+	if *phone != "" {
+		existing.Phone = *phone
+	}
+	if *notes != "" {
+		existing.Notes = *notes
+	}
+
+	if *company != "" {
+		existingCompany, err := db.FindCompanyByName(database, *company)
+		if err != nil {
+			return fmt.Errorf("failed to lookup company: %w", err)
+		}
+		if existingCompany == nil {
+			return fmt.Errorf("company not found: %s", *company)
+		}
+		existing.CompanyID = &existingCompany.ID
+	}
+
+	err = db.UpdateContact(database, contactID, existing)
+	if err != nil {
+		return fmt.Errorf("failed to update contact: %w", err)
+	}
+
+	fmt.Printf("✓ Contact updated: %s (ID: %s)\n", existing.Name, contactID)
+	return nil
+}
+
+// DeleteContactCommand deletes a contact
+func DeleteContactCommand(database *sql.DB, args []string) error {
+	fs := flag.NewFlagSet("delete-contact", flag.ExitOnError)
+	_ = fs.Parse(args)
+
+	// First positional arg is the contact ID
+	if len(fs.Args()) < 1 {
+		return fmt.Errorf("contact ID is required")
+	}
+
+	contactID, err := uuid.Parse(fs.Args()[0])
+	if err != nil {
+		return fmt.Errorf("invalid contact ID: %w", err)
+	}
+
+	err = db.DeleteContact(database, contactID)
+	if err != nil {
+		return fmt.Errorf("failed to delete contact: %w", err)
+	}
+
+	fmt.Printf("✓ Contact deleted: %s\n", contactID)
+	return nil
+}
