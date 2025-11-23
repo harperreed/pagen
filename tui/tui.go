@@ -143,10 +143,6 @@ var (
 )
 
 // Stub methods for views - to be implemented in subsequent tasks
-func (m Model) renderListView() string {
-	return "List view - not yet implemented"
-}
-
 func (m Model) renderDetailView() string {
 	return "Detail view - not yet implemented"
 }
@@ -160,10 +156,6 @@ func (m Model) renderGraphView() string {
 }
 
 // Stub methods for key handlers - to be implemented in subsequent tasks
-func (m Model) handleListKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	return m, nil
-}
-
 func (m Model) handleDetailKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
