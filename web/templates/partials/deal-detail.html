@@ -1,0 +1,50 @@
+<div class="bg-white shadow rounded-lg p-6">
+    <div class="flex justify-between items-start mb-4">
+        <h3 class="text-2xl font-bold text-gray-800">{{.Deal.Title}}</h3>
+        <button class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.parentElement.remove()">✕</button>
+    </div>
+
+    <dl class="grid grid-cols-2 gap-4">
+        <div>
+            <dt class="text-sm font-medium text-gray-500">Company</dt>
+            <dd class="mt-1 text-sm text-gray-900">{{.CompanyName}}</dd>
+        </div>
+        {{if .ContactName}}
+        <div>
+            <dt class="text-sm font-medium text-gray-500">Contact</dt>
+            <dd class="mt-1 text-sm text-gray-900">{{.ContactName}}</dd>
+        </div>
+        {{end}}
+        <div>
+            <dt class="text-sm font-medium text-gray-500">Stage</dt>
+            <dd class="mt-1 text-sm text-gray-900">
+                <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                    {{.Deal.Stage}}
+                </span>
+            </dd>
+        </div>
+        <div>
+            <dt class="text-sm font-medium text-gray-500">Amount</dt>
+            <dd class="mt-1 text-sm text-gray-900">${{divide .Deal.Amount 100}} {{.Deal.Currency}}</dd>
+        </div>
+        {{if .Deal.ExpectedCloseDate}}
+        <div>
+            <dt class="text-sm font-medium text-gray-500">Expected Close</dt>
+            <dd class="mt-1 text-sm text-gray-900">{{.Deal.ExpectedCloseDate.Format "2006-01-02"}}</dd>
+        </div>
+        {{end}}
+    </dl>
+
+    {{if .Notes}}
+    <div class="mt-6">
+        <h4 class="text-lg font-semibold text-gray-800 mb-2">Notes</h4>
+        <ul class="space-y-2">
+            {{range .Notes}}
+            <li class="text-sm text-gray-700 border-l-2 border-purple-300 pl-3">
+                <span class="text-gray-500">[{{.CreatedAt.Format "2006-01-02"}}]</span> {{.Content}}
+            </li>
+            {{end}}
+        </ul>
+    </div>
+    {{end}}
+</div>

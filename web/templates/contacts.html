@@ -1,0 +1,55 @@
+{{define "content"}}
+<div class="space-y-6">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4">Contacts</h2>
+
+        <!-- Search -->
+        <div class="mb-4">
+            <input
+                type="text"
+                name="q"
+                placeholder="Search contacts..."
+                class="w-full px-4 py-2 border rounded-lg"
+                hx-get="/contacts"
+                hx-trigger="keyup changed delay:500ms"
+                hx-target="#contacts-table"
+            >
+        </div>
+
+        <!-- Table -->
+        <div id="contacts-table">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {{range .Contacts}}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">{{.Name}}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{.Email}}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{.CompanyName}}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button
+                                class="text-purple-600 hover:text-purple-800"
+                                hx-get="/partials/contact-detail?id={{.ID}}"
+                                hx-target="#detail-panel"
+                            >
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Detail Panel -->
+    <div id="detail-panel"></div>
+</div>
+{{end}}
