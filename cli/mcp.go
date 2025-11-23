@@ -23,6 +23,7 @@ func MCPCommand(db *sql.DB) error {
 	queryHandlers := handlers.NewQueryHandlers(db)
 	resourceHandlers := handlers.NewResourceHandlers(db)
 	promptHandlers := handlers.NewPromptHandlers(db)
+	vizHandlers := handlers.NewVizHandlers(db)
 
 	// Create MCP server
 	server := mcp.NewServer(&mcp.Implementation{
@@ -120,6 +121,11 @@ func MCPCommand(db *sql.DB) error {
 		Name:        "query_crm",
 		Description: "Universal query tool for flexible filtering across all CRM entity types (contact, company, deal, relationship)",
 	}, queryHandlers.QueryCRM)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "generate_graph",
+		Description: "Generate GraphViz relationship/org/pipeline graphs",
+	}, vizHandlers.GenerateGraph)
 
 	// Register resources
 	server.AddResourceTemplate(&mcp.ResourceTemplate{
