@@ -163,9 +163,11 @@ func main() {
 		log.Printf("CRM database: %s", finalDBPath)
 
 		if len(commandArgs) == 0 {
-			fmt.Println("Error: viz requires a subcommand")
-			printUsage()
-			os.Exit(1)
+			// No subcommand = dashboard
+			if err := cli.VizDashboardCommand(database, commandArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+			return
 		}
 
 		vizCommand := commandArgs[0]

@@ -99,3 +99,15 @@ func VizGraphPipelineCommand(db *sql.DB, args []string) error {
 	fmt.Println(dot)
 	return nil
 }
+
+func VizDashboardCommand(database *sql.DB, args []string) error {
+	stats, err := viz.GenerateDashboardStats(database)
+	if err != nil {
+		return fmt.Errorf("failed to generate dashboard stats: %w", err)
+	}
+
+	output := viz.RenderDashboard(stats)
+	fmt.Print(output)
+
+	return nil
+}
