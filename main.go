@@ -112,6 +112,14 @@ func main() {
 			if err := cli.ListCompaniesCommand(database, crmArgs); err != nil {
 				log.Fatalf("Error: %v", err)
 			}
+		case "update-company":
+			if err := cli.UpdateCompanyCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "delete-company":
+			if err := cli.DeleteCompanyCommand(database, crmArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
 
 		// Deal commands
 		case "add-deal":

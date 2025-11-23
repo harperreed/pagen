@@ -42,6 +42,16 @@ func MCPCommand(db *sql.DB) error {
 	}, companyHandlers.FindCompanies)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "update_company",
+		Description: "Update an existing company's information",
+	}, companyHandlers.UpdateCompany)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "delete_company",
+		Description: "Delete a company (must have no active deals)",
+	}, companyHandlers.DeleteCompany)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "add_contact",
 		Description: "Add a new contact to the CRM",
 	}, contactHandlers.AddContact)

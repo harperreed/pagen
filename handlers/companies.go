@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/harperreed/pagen/db"
 	"github.com/harperreed/pagen/models"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -161,4 +162,81 @@ func companyToMap(company *models.Company) map[string]interface{} {
 		"created_at": company.CreatedAt,
 		"updated_at": company.UpdatedAt,
 	}
+}
+
+type UpdateCompanyInput struct {
+	CompanyID string `json:"company_id" jsonschema:"UUID of the company to update"`
+	Name      string `json:"name,omitempty" jsonschema:"Updated company name"`
+	Domain    string `json:"domain,omitempty" jsonschema:"Updated domain"`
+	Industry  string `json:"industry,omitempty" jsonschema:"Updated industry"`
+	Notes     string `json:"notes,omitempty" jsonschema:"Updated notes"`
+}
+
+func (h *CompanyHandlers) UpdateCompany(_ context.Context, request *mcp.CallToolRequest, input UpdateCompanyInput) (*mcp.CallToolResult, CompanyOutput, error) {
+	if input.CompanyID == "" {
+		return nil, CompanyOutput{}, fmt.Errorf("company_id is required")
+	}
+
+	companyID, err := uuid.Parse(input.CompanyID)
+	if err != nil {
+		return nil, CompanyOutput{}, fmt.Errorf("invalid company_id: %w", err)
+	}
+
+	// Get existing company
+	company, err := db.GetCompany(h.db, companyID)
+	if err != nil {
+		return nil, CompanyOutput{}, fmt.Errorf("company not found: %w", err)
+	}
+	if company == nil {
+		return nil, CompanyOutput{}, fmt.Errorf("company not found: %s", companyID)
+	}
+
+	// Apply updates
+	if input.Name != "" {
+		company.Name = input.Name
+	}
+	if input.Domain != "" {
+		company.Domain = input.Domain
+	}
+	if input.Industry != "" {
+		company.Industry = input.Industry
+	}
+	if input.Notes != "" {
+		company.Notes = input.Notes
+	}
+
+	err = db.UpdateCompany(h.db, companyID, company)
+	if err != nil {
+		return nil, CompanyOutput{}, fmt.Errorf("failed to update company: %w", err)
+	}
+
+	return nil, companyToOutput(company), nil
+}
+
+type DeleteCompanyInput struct {
+	CompanyID string `json:"company_id" jsonschema:"UUID of the company to delete"`
+}
+
+type DeleteCompanyOutput struct {
+	Message string `json:"message"`
+}
+
+func (h *CompanyHandlers) DeleteCompany(_ context.Context, request *mcp.CallToolRequest, input DeleteCompanyInput) (*mcp.CallToolResult, DeleteCompanyOutput, error) {
+	if input.CompanyID == "" {
+		return nil, DeleteCompanyOutput{}, fmt.Errorf("company_id is required")
+	}
+
+	companyID, err := uuid.Parse(input.CompanyID)
+	if err != nil {
+		return nil, DeleteCompanyOutput{}, fmt.Errorf("invalid company_id: %w", err)
+	}
+
+	err = db.DeleteCompany(h.db, companyID)
+	if err != nil {
+		return nil, DeleteCompanyOutput{}, fmt.Errorf("failed to delete company: %w", err)
+	}
+
+	return nil, DeleteCompanyOutput{
+		Message: fmt.Sprintf("Deleted company: %s", companyID),
+	}, nil
 }
