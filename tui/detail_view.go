@@ -193,6 +193,7 @@ func (m Model) handleDetailKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.viewMode = ViewList
 	case "e":
 		m.viewMode = ViewEdit
+		m.initFormInputs()
 	case "d":
 		// TODO: Show delete confirmation
 	case "g":

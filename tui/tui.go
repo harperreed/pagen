@@ -143,19 +143,11 @@ var (
 )
 
 // Stub methods for views - to be implemented in subsequent tasks
-func (m Model) renderEditView() string {
-	return "Edit view - not yet implemented"
-}
-
 func (m Model) renderGraphView() string {
 	return "Graph view - not yet implemented"
 }
 
 // Stub methods for key handlers - to be implemented in subsequent tasks
-func (m Model) handleEditKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	return m, nil
-}
-
 func (m Model) handleGraphKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }

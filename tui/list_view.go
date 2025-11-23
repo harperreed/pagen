@@ -216,6 +216,7 @@ func (m Model) handleListKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Switch to edit view (new)
 		m.viewMode = ViewEdit
 		m.selectedID = ""
+		m.initFormInputs()
 	}
 
 	return m, nil
