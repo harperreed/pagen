@@ -302,11 +302,60 @@ func (s *Server) handleDealDetail(w http.ResponseWriter, r *http.Request) {
 	s.renderTemplate(w, "partials/deal-detail.html", data)
 }
 
-// Stub handlers - to be implemented in later tasks
 func (s *Server) handleGraphs(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	data := map[string]interface{}{
+		"Title": "Graphs",
+	}
+
+	s.renderTemplate(w, "graphs.html", data)
 }
 
 func (s *Server) handleGraphPartial(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	graphType := r.URL.Query().Get("type")
+	entityIDStr := r.URL.Query().Get("entity_id")
+
+	var dot string
+	var err error
+
+	switch graphType {
+	case "contacts":
+		var contactID *uuid.UUID
+		if entityIDStr != "" {
+			id, parseErr := uuid.Parse(entityIDStr)
+			if parseErr == nil {
+				contactID = &id
+			}
+		}
+		dot, err = s.generator.GenerateContactGraph(contactID)
+
+	case "company":
+		if entityIDStr == "" {
+			http.Error(w, "Company ID required", http.StatusBadRequest)
+			return
+		}
+		companyID, parseErr := uuid.Parse(entityIDStr)
+		if parseErr != nil {
+			http.Error(w, "Invalid company ID", http.StatusBadRequest)
+			return
+		}
+		dot, err = s.generator.GenerateCompanyGraph(companyID)
+
+	case "pipeline":
+		dot, err = s.generator.GeneratePipelineGraph()
+
+	default:
+		http.Error(w, "Invalid graph type", http.StatusBadRequest)
+		return
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := map[string]interface{}{
+		"DOT": dot,
+	}
+
+	s.renderTemplate(w, "partials/graph.html", data)
 }

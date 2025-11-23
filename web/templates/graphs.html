@@ -1,0 +1,70 @@
+{{define "content"}}
+<div class="space-y-6">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-3xl font-bold text-gray-800 mb-4">Graphs</h2>
+
+        <!-- Graph Type Selector -->
+        <div class="mb-6 grid grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Graph Type</label>
+                <select
+                    id="graph-type"
+                    class="w-full px-4 py-2 border rounded-lg"
+                >
+                    <option value="contacts">Contact Relationships</option>
+                    <option value="company">Company Org Chart</option>
+                    <option value="pipeline">Deal Pipeline</option>
+                </select>
+            </div>
+
+            <div id="entity-selector" style="display: none;">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Entity</label>
+                <input
+                    type="text"
+                    id="entity-id"
+                    placeholder="Entity ID"
+                    class="w-full px-4 py-2 border rounded-lg"
+                >
+            </div>
+
+            <div class="flex items-end">
+                <button
+                    class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    onclick="generateGraph()"
+                >
+                    Generate Graph
+                </button>
+            </div>
+        </div>
+
+        <!-- Graph Display -->
+        <div id="graph-display" class="border-t pt-6">
+            <p class="text-gray-500 text-center">Select a graph type and click Generate Graph</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show/hide entity selector based on graph type
+    document.getElementById('graph-type').addEventListener('change', function() {
+        const entitySelector = document.getElementById('entity-selector');
+        if (this.value === 'company') {
+            entitySelector.style.display = 'block';
+        } else {
+            entitySelector.style.display = 'none';
+        }
+    });
+
+    function generateGraph() {
+        const type = document.getElementById('graph-type').value;
+        const entityId = document.getElementById('entity-id').value;
+
+        let url = `/partials/graph?type=${type}`;
+        if (entityId) {
+            url += `&entity_id=${entityId}`;
+        }
+
+        htmx.ajax('GET', url, {target: '#graph-display'});
+    }
+</script>
+{{end}}
