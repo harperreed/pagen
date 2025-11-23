@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 
 	"github.com/adrg/xdg"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/harperreed/pagen/cli"
 	"github.com/harperreed/pagen/db"
+	"github.com/harperreed/pagen/tui"
 )
 
 const version = "0.1.3"
@@ -34,10 +36,21 @@ func main() {
 	// Get remaining args after flags
 	args := flag.Args()
 
-	// If no command specified, show usage
+	// If no command specified, launch TUI
 	if len(args) == 0 {
-		printUsage()
-		os.Exit(0)
+		finalDBPath := getDatabasePath(*dbPath)
+		database, err := db.OpenDatabase(finalDBPath)
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
+		defer database.Close()
+
+		tuiModel := tui.NewModel(database)
+		p := tea.NewProgram(tuiModel, tea.WithAltScreen())
+		if _, err := p.Run(); err != nil {
+			log.Fatalf("TUI error: %v", err)
+		}
+		return
 	}
 
 	// Route to top-level command
