@@ -18,6 +18,7 @@ const (
 	ViewDetail
 	ViewEdit
 	ViewGraph
+	ViewConfirmDelete
 )
 
 // EntityType represents the type of entity being viewed
@@ -48,6 +49,10 @@ type Model struct {
 
 	// Graph view state
 	graphDOT string //nolint:unused // will be used in Task 4.5
+
+	// Delete confirmation state
+	deleteConfirmed bool
+	deleteMessage   string
 
 	// UI state
 	width  int
@@ -92,6 +97,8 @@ func (m Model) View() string {
 		return m.renderEditView()
 	case ViewGraph:
 		return m.renderGraphView()
+	case ViewConfirmDelete:
+		return m.renderConfirmDeleteView()
 	}
 	return ""
 }
@@ -115,6 +122,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEditKeys(msg)
 	case ViewGraph:
 		return m.handleGraphKeys(msg)
+	case ViewConfirmDelete:
+		return m.handleConfirmDeleteKeys(msg)
 	}
 
 	return m, nil

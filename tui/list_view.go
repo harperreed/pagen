@@ -18,6 +18,15 @@ func (m Model) renderListView() string {
 	s.WriteString(titleStyle.Render("PAGEN CRM"))
 	s.WriteString("\n\n")
 
+	// Show delete message if present
+	if m.deleteMessage != "" {
+		msgStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("10")).
+			Bold(true)
+		s.WriteString(msgStyle.Render("✓ " + m.deleteMessage))
+		s.WriteString("\n\n")
+	}
+
 	// Tabs
 	s.WriteString(m.renderTabs())
 	s.WriteString("\n\n")

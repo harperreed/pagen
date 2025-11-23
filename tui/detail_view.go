@@ -195,7 +195,9 @@ func (m Model) handleDetailKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.viewMode = ViewEdit
 		m.initFormInputs()
 	case "d":
-		// TODO: Show delete confirmation
+		// Show delete confirmation
+		m.viewMode = ViewConfirmDelete
+		m.deleteConfirmed = false
 	case "g":
 		m.viewMode = ViewGraph
 		err := m.generateGraph()
