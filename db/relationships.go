@@ -140,3 +140,35 @@ func DeleteRelationship(db *sql.DB, id uuid.UUID) error {
 	_, err := db.Exec(`DELETE FROM relationships WHERE id = ?`, id.String())
 	return err
 }
+
+func GetAllRelationships(db *sql.DB) ([]models.Relationship, error) {
+	rows, err := db.Query(`
+		SELECT id, contact_id_1, contact_id_2, relationship_type, context, created_at, updated_at
+		FROM relationships
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var relationships []models.Relationship
+	for rows.Next() {
+		var rel models.Relationship
+		err := rows.Scan(
+			&rel.ID,
+			&rel.ContactID1,
+			&rel.ContactID2,
+			&rel.RelationshipType,
+			&rel.Context,
+			&rel.CreatedAt,
+			&rel.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		relationships = append(relationships, rel)
+	}
+
+	return relationships, rows.Err()
+}
