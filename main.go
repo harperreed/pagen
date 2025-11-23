@@ -235,7 +235,7 @@ func main() {
 		}
 
 	case "web":
-		port := 8080
+		port := 10666
 		if len(commandArgs) > 0 && commandArgs[0] == "--port" && len(commandArgs) > 1 {
 			_, _ = fmt.Sscanf(commandArgs[1], "%d", &port)
 		}
