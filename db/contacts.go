@@ -148,21 +148,33 @@ func UpdateContact(db *sql.DB, id uuid.UUID, updates *models.Contact) error {
 }
 
 func DeleteContact(db *sql.DB, id uuid.UUID) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback() // Safe even after commit
+	}()
+
 	// Delete all relationships involving this contact
-	_, err := db.Exec(`DELETE FROM relationships WHERE contact_id_1 = ? OR contact_id_2 = ?`, id.String(), id.String())
+	_, err = tx.Exec(`DELETE FROM relationships WHERE contact_id_1 = ? OR contact_id_2 = ?`, id.String(), id.String())
 	if err != nil {
 		return fmt.Errorf("failed to delete relationships: %w", err)
 	}
 
 	// Set contact_id to NULL for any deals
-	_, err = db.Exec(`UPDATE deals SET contact_id = NULL WHERE contact_id = ?`, id.String())
+	_, err = tx.Exec(`UPDATE deals SET contact_id = NULL WHERE contact_id = ?`, id.String())
 	if err != nil {
 		return fmt.Errorf("failed to update deals: %w", err)
 	}
 
 	// Delete the contact
-	_, err = db.Exec(`DELETE FROM contacts WHERE id = ?`, id.String())
-	return err
+	_, err = tx.Exec(`DELETE FROM contacts WHERE id = ?`, id.String())
+	if err != nil {
+		return fmt.Errorf("failed to delete contact: %w", err)
+	}
+
+	return tx.Commit()
 }
 
 func UpdateContactLastContacted(db *sql.DB, contactID uuid.UUID, timestamp time.Time) error {
