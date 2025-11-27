@@ -9,6 +9,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/harperreed/pagen/db"
@@ -37,6 +39,12 @@ func NewServer(database *sql.DB) (*Server, error) {
 		"multiply": func(a, b int64) int64 {
 			return a * b
 		},
+		"add": func(a, b int) int {
+			return a + b
+		},
+		"sub": func(a, b int) int {
+			return a - b
+		},
 	}
 
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(templatesFS, "templates/*.html", "templates/partials/*.html")
@@ -58,12 +66,14 @@ func (s *Server) Start(port int) error {
 	http.HandleFunc("/companies", s.handleCompanies)
 	http.HandleFunc("/deals", s.handleDeals)
 	http.HandleFunc("/graphs", s.handleGraphs)
+	http.HandleFunc("/followups", s.handleFollowups)
 
 	// Partials for HTMX
 	http.HandleFunc("/partials/contact-detail", s.handleContactDetail)
 	http.HandleFunc("/partials/company-detail", s.handleCompanyDetail)
 	http.HandleFunc("/partials/deal-detail", s.handleDealDetail)
 	http.HandleFunc("/partials/graph", s.handleGraphPartial)
+	http.HandleFunc("/followups/log/", s.handleFollowupLog)
 
 	addr := fmt.Sprintf(":%d", port)
 	log.Printf("Starting web server at http://localhost%s", addr)
@@ -366,4 +376,57 @@ func (s *Server) handleGraphPartial(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.renderTemplate(w, "partials/graph.html", data)
+}
+
+func (s *Server) handleFollowups(w http.ResponseWriter, r *http.Request) {
+	followups, err := db.GetFollowupList(s.db, 50)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Followups []models.FollowupContact
+	}{
+		Followups: followups,
+	}
+
+	err = s.templates.ExecuteTemplate(w, "followups", data)
+	if err != nil {
+		log.Printf("Template error rendering followups: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *Server) handleFollowupLog(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	contactID := strings.TrimPrefix(r.URL.Path, "/followups/log/")
+	id, err := uuid.Parse(contactID)
+	if err != nil {
+		http.Error(w, "Invalid contact ID", http.StatusBadRequest)
+		return
+	}
+
+	interaction := &models.InteractionLog{
+		ContactID:       id,
+		InteractionType: models.InteractionMessage,
+		Timestamp:       time.Now(),
+		Notes:           "Quick contact via web UI",
+	}
+
+	err = db.LogInteraction(s.db, interaction)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = w.Write([]byte(`<td colspan="5" class="px-4 py-3 text-green-600">✓ Interaction logged</td>`))
+	if err != nil {
+		log.Printf("Error writing response: %v", err)
+	}
 }

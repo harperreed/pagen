@@ -1,0 +1,72 @@
+<!-- web/templates/followups.html -->
+{{define "followups"}}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Follow-Ups - Pagen CRM</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6">Follow-Ups</h1>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="mb-4 flex gap-4">
+                <select id="filter-strength" class="border rounded px-3 py-2">
+                    <option value="">All Strengths</option>
+                    <option value="strong">Strong</option>
+                    <option value="medium">Medium</option>
+                    <option value="weak">Weak</option>
+                </select>
+
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" id="overdue-only" class="rounded">
+                    <span>Overdue Only</span>
+                </label>
+            </div>
+
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Name</th>
+                        <th class="px-4 py-2 text-left">Days Since</th>
+                        <th class="px-4 py-2 text-left">Priority</th>
+                        <th class="px-4 py-2 text-left">Strength</th>
+                        <th class="px-4 py-2 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Followups}}
+                    <tr class="border-t hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            {{if gt .DaysSinceContact (add .CadenceDays 7)}}🔴{{else if ge .DaysSinceContact (sub .CadenceDays 3)}}🟡{{else}}🟢{{end}}
+                            <a href="/contacts/{{.ID}}" class="text-blue-600 hover:underline">{{.Name}}</a>
+                        </td>
+                        <td class="px-4 py-3">{{.DaysSinceContact}} days</td>
+                        <td class="px-4 py-3">{{printf "%.1f" .PriorityScore}}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded text-sm
+                                {{if eq .RelationshipStrength "strong"}}bg-green-100 text-green-800
+                                {{else if eq .RelationshipStrength "medium"}}bg-yellow-100 text-yellow-800
+                                {{else}}bg-gray-100 text-gray-800{{end}}">
+                                {{.RelationshipStrength}}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <button
+                                hx-post="/followups/log/{{.ID}}"
+                                hx-swap="outerHTML"
+                                class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                                Log Contact
+                            </button>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+{{end}}
