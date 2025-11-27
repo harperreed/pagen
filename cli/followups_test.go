@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/harperreed/pagen/db"
+	"github.com/harperreed/pagen/models"
 )
 
 func setupTestCLI(t *testing.T) *sql.DB {
@@ -33,5 +34,37 @@ func TestFollowupListCommand(t *testing.T) {
 	err := FollowupListCommand(database, []string{})
 	if err != nil {
 		t.Errorf("FollowupListCommand failed: %v", err)
+	}
+}
+
+func TestLogInteractionCommand(t *testing.T) {
+	database := setupTestCLI(t)
+	defer func() { _ = database.Close() }()
+
+	// Create a contact first
+	contact := &models.Contact{Name: "Alice", Email: "alice@example.com"}
+	if err := db.CreateContact(database, contact); err != nil {
+		t.Fatalf("failed to create contact: %v", err)
+	}
+
+	args := []string{
+		"--contact", contact.ID.String(),
+		"--type", "meeting",
+		"--notes", "Coffee chat",
+	}
+
+	err := LogInteractionCommand(database, args)
+	if err != nil {
+		t.Errorf("LogInteractionCommand failed: %v", err)
+	}
+
+	// Verify interaction was logged
+	history, err := db.GetInteractionHistory(database, contact.ID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(history) != 1 {
+		t.Errorf("expected 1 interaction, got %d", len(history))
 	}
 }

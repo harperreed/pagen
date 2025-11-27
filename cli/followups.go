@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"os"
 	"text/tabwriter"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/harperreed/pagen/db"
 	"github.com/harperreed/pagen/models"
 )
@@ -104,4 +106,56 @@ func FollowupStatsCommand(database *sql.DB, args []string) error {
 	}
 
 	return rows.Err()
+}
+
+// LogInteractionCommand logs an interaction with a contact
+func LogInteractionCommand(database *sql.DB, args []string) error {
+	fs := flag.NewFlagSet("log", flag.ExitOnError)
+	contactIDStr := fs.String("contact", "", "Contact ID or name (required)")
+	interactionType := fs.String("type", "meeting", "Interaction type (meeting/call/email/message/event)")
+	notes := fs.String("notes", "", "Notes about the interaction")
+	sentiment := fs.String("sentiment", "", "Sentiment (positive/neutral/negative)")
+	_ = fs.Parse(args)
+
+	if *contactIDStr == "" {
+		return fmt.Errorf("--contact is required")
+	}
+
+	// Try to parse as UUID, otherwise search by name
+	var contactID uuid.UUID
+	parsedID, err := uuid.Parse(*contactIDStr)
+	if err == nil {
+		contactID = parsedID
+	} else {
+		// Search by name
+		contacts, err := db.FindContacts(database, *contactIDStr, nil, 10)
+		if err != nil {
+			return fmt.Errorf("failed to find contact: %w", err)
+		}
+		if len(contacts) == 0 {
+			return fmt.Errorf("no contact found matching: %s", *contactIDStr)
+		}
+		if len(contacts) > 1 {
+			return fmt.Errorf("multiple contacts found, please use ID")
+		}
+		contactID = contacts[0].ID
+	}
+
+	interaction := &models.InteractionLog{
+		ContactID:       contactID,
+		InteractionType: *interactionType,
+		Timestamp:       time.Now(),
+		Notes:           *notes,
+	}
+
+	if *sentiment != "" {
+		interaction.Sentiment = sentiment
+	}
+
+	if err := db.LogInteraction(database, interaction); err != nil {
+		return fmt.Errorf("failed to log interaction: %w", err)
+	}
+
+	fmt.Printf("✓ Logged %s interaction with contact\n", *interactionType)
+	return nil
 }
