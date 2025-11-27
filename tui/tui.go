@@ -28,6 +28,7 @@ const (
 	EntityContacts EntityType = iota
 	EntityCompanies
 	EntityDeals
+	EntityFollowups
 )
 
 // Model is the main bubbletea model

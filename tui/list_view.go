@@ -42,7 +42,7 @@ func (m Model) renderListView() string {
 }
 
 func (m Model) renderTabs() string {
-	tabs := []string{"Contacts", "Companies", "Deals"}
+	tabs := []string{"Contacts", "Companies", "Deals", "Followups"}
 	var rendered []string
 
 	for i, tab := range tabs {
@@ -64,6 +64,8 @@ func (m Model) renderTable() string {
 		return m.renderCompaniesTable()
 	case EntityDeals:
 		return m.renderDealsTable()
+	case EntityFollowups:
+		return m.renderFollowupsTable()
 	}
 	return ""
 }
@@ -196,6 +198,7 @@ func (m Model) renderListHelp() string {
 	help := []string{
 		"↑/↓: Navigate",
 		"Tab: Switch tabs",
+		"f: Followups",
 		"Enter: View details",
 		"/: Search",
 		"n: New",
@@ -213,7 +216,11 @@ func (m Model) handleListKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		m.selectedRow++
 	case "tab":
-		m.entityType = (m.entityType + 1) % 3
+		m.entityType = (m.entityType + 1) % 4
+		m.selectedRow = 0
+	case "f":
+		// Jump to followups tab
+		m.entityType = EntityFollowups
 		m.selectedRow = 0
 	case "enter":
 		// Switch to detail view
