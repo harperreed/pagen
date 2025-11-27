@@ -8,6 +8,7 @@ A personal agent toolkit with CRM capabilities. Works both as a Model Context Pr
 - **Company Management** - Organize contacts by company with industry tracking
 - **Deal Pipeline** - Manage sales from prospecting to closed
 - **Relationship Tracking** - Map connections between contacts (colleagues, friends, etc.)
+- **Follow-Up Tracking** - Never lose touch with your network through smart cadence tracking
 - **Universal Query** - Flexible searching across all entity types
 
 ## Installation
@@ -253,6 +254,40 @@ pagen crm delete-relationship <id>
 pagen crm query --entity-type <contact|company|deal|relationship> [--query "search"] [--limit 50]
 ```
 
+### Follow-Up Commands
+
+```bash
+# List contacts needing follow-up
+pagen followups list [--overdue-only] [--strength weak|medium|strong] [--limit 10]
+
+# Log an interaction
+pagen followups log --contact "Alice" --type meeting --notes "Coffee chat"
+
+# Set follow-up cadence
+pagen followups set-cadence --contact "Bob" --days 14 --strength strong
+
+# View network health stats
+pagen followups stats
+
+# Generate daily digest
+pagen followups digest [--format text|json|html]
+```
+
+### Follow-Up in TUI
+
+Press `f` to view the Follow-Ups tab showing:
+- Prioritized list of contacts needing attention
+- Visual indicators (🔴 overdue, 🟡 due soon, 🟢 on track)
+- Quick interaction logging with `l`
+- Cadence adjustment with `c`
+
+### Follow-Up in Web UI
+
+Visit `/followups` for:
+- Filterable table of contacts needing follow-up
+- One-click interaction logging via HTMX
+- Priority-based sorting
+
 ## Database
 
 The server uses SQLite and stores data at:
@@ -269,7 +304,7 @@ The server uses SQLite and stores data at:
 
 ## MCP Tools
 
-Total: **19 tools** for Claude Desktop integration
+Total: **22 tools** for Claude Desktop integration
 
 ### Contact Operations (5 tools)
 - `add_contact` - Create new contacts with optional company linking
@@ -295,6 +330,11 @@ Total: **19 tools** for Claude Desktop integration
 - `find_contact_relationships` - Find all connections for a contact
 - `update_relationship` - Update a relationship's type and context
 - `remove_relationship` - Delete relationship links
+
+### Follow-Up Operations (3 tools)
+- `get_followup_list` - Get prioritized follow-up suggestions
+- `log_interaction` - Log interactions and update tracking
+- `set_cadence` - Configure follow-up frequency per contact
 
 ### Query Operations (1 tool)
 - `query_crm` - Universal query across all entity types with flexible filtering
