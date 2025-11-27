@@ -256,6 +256,53 @@ func main() {
 			log.Fatalf("Web server error: %v", err)
 		}
 
+	case "followups":
+		// Follow-up tracking subcommands
+		finalDBPath := getDatabasePath(*dbPath)
+		database, err := db.OpenDatabase(finalDBPath)
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
+		defer func() { _ = database.Close() }()
+
+		log.Printf("CRM database: %s", finalDBPath)
+
+		if len(commandArgs) == 0 {
+			fmt.Println("Usage: pagen followups <command>")
+			fmt.Println("Commands: list, log, set-cadence, stats, digest")
+			os.Exit(1)
+		}
+
+		followupCommand := commandArgs[0]
+		followupArgs := commandArgs[1:]
+
+		switch followupCommand {
+		case "list":
+			if err := cli.FollowupListCommand(database, followupArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "log":
+			if err := cli.LogInteractionCommand(database, followupArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "set-cadence":
+			if err := cli.SetCadenceCommand(database, followupArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "stats":
+			if err := cli.FollowupStatsCommand(database, followupArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "digest":
+			if err := cli.DigestCommand(database, followupArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		default:
+			fmt.Printf("Unknown followups command: %s\n", followupCommand)
+			fmt.Println("Commands: list, log, set-cadence, stats, digest")
+			os.Exit(1)
+		}
+
 	default:
 		fmt.Printf("Unknown command: %s\n\n", command)
 		printUsage()
