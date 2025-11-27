@@ -78,6 +78,32 @@ CREATE TABLE IF NOT EXISTS relationships (
 
 CREATE INDEX IF NOT EXISTS idx_relationships_contact_1 ON relationships(contact_id_1);
 CREATE INDEX IF NOT EXISTS idx_relationships_contact_2 ON relationships(contact_id_2);
+
+CREATE TABLE IF NOT EXISTS contact_cadence (
+	contact_id TEXT PRIMARY KEY,
+	cadence_days INTEGER NOT NULL DEFAULT 30,
+	relationship_strength TEXT NOT NULL DEFAULT 'medium' CHECK(relationship_strength IN ('weak', 'medium', 'strong')),
+	priority_score REAL NOT NULL DEFAULT 0,
+	last_interaction_date DATETIME,
+	next_followup_date DATETIME,
+	FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_cadence_priority ON contact_cadence(priority_score DESC);
+CREATE INDEX IF NOT EXISTS idx_contact_cadence_next_followup ON contact_cadence(next_followup_date);
+
+CREATE TABLE IF NOT EXISTS interaction_log (
+	id TEXT PRIMARY KEY,
+	contact_id TEXT NOT NULL,
+	interaction_type TEXT NOT NULL CHECK(interaction_type IN ('meeting', 'call', 'email', 'message', 'event')),
+	timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	notes TEXT,
+	sentiment TEXT CHECK(sentiment IN ('positive', 'neutral', 'negative')),
+	FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_interaction_log_contact ON interaction_log(contact_id);
+CREATE INDEX IF NOT EXISTS idx_interaction_log_timestamp ON interaction_log(timestamp DESC);
 `
 
 func InitSchema(db *sql.DB) error {

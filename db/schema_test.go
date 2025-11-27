@@ -30,3 +30,30 @@ func TestInitSchema(t *testing.T) {
 		}
 	}
 }
+
+func TestSchemaIncludesFollowupTables(t *testing.T) {
+	db := setupTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	// Check contact_cadence table exists
+	row := db.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='contact_cadence'`)
+	var tableName string
+	err := row.Scan(&tableName)
+	if err != nil {
+		t.Fatalf("contact_cadence table not found: %v", err)
+	}
+
+	// Check interaction_log table exists
+	row = db.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='interaction_log'`)
+	err = row.Scan(&tableName)
+	if err != nil {
+		t.Fatalf("interaction_log table not found: %v", err)
+	}
+
+	// Check indexes exist
+	row = db.QueryRow(`SELECT name FROM sqlite_master WHERE type='index' AND name='idx_contact_cadence_priority'`)
+	err = row.Scan(&tableName)
+	if err != nil {
+		t.Fatalf("priority index not found: %v", err)
+	}
+}
