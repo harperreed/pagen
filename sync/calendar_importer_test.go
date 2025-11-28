@@ -3,9 +3,11 @@
 package sync
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/api/calendar/v3"
 
 	"github.com/harperreed/pagen/db"
@@ -1006,5 +1008,324 @@ func TestExtractContacts_HandlesEmptyAttendees(t *testing.T) {
 	// Should return empty list
 	if len(contactIDs) != 0 {
 		t.Errorf("expected 0 contact IDs, got %d", len(contactIDs))
+	}
+}
+
+// Interaction Logging Tests
+
+func TestLogInteraction_CreatesInteractionsForAllContacts(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	// Create test contacts
+	contact1 := &models.Contact{Name: "Alice", Email: "alice@example.com"}
+	contact2 := &models.Contact{Name: "Bob", Email: "bob@example.com"}
+	if err := db.CreateContact(database, contact1); err != nil {
+		t.Fatalf("failed to create contact1: %v", err)
+	}
+	if err := db.CreateContact(database, contact2); err != nil {
+		t.Fatalf("failed to create contact2: %v", err)
+	}
+
+	// Create test event
+	event := &calendar.Event{
+		Id:      "event1",
+		Summary: "Team Standup",
+		Start: &calendar.EventDateTime{
+			DateTime: "2025-11-28T10:00:00Z",
+		},
+		End: &calendar.EventDateTime{
+			DateTime: "2025-11-28T10:30:00Z",
+		},
+		Location: "Conference Room A",
+		Attendees: []*calendar.EventAttendee{
+			{Email: "alice@example.com"},
+			{Email: "bob@example.com"},
+		},
+	}
+
+	// Log interaction
+	contactIDs := []uuid.UUID{contact1.ID, contact2.ID}
+	err := logInteraction(database, event, contactIDs)
+	if err != nil {
+		t.Fatalf("logInteraction failed: %v", err)
+	}
+
+	// Verify interactions were created - one per contact
+	for _, contactID := range contactIDs {
+		interactions, err := db.GetInteractionHistory(database, contactID, 10)
+		if err != nil {
+			t.Fatalf("failed to get interaction history: %v", err)
+		}
+		if len(interactions) != 1 {
+			t.Errorf("expected 1 interaction for contact %s, got %d", contactID, len(interactions))
+			continue
+		}
+
+		interaction := interactions[0]
+
+		// Verify interaction type
+		if interaction.InteractionType != "meeting" {
+			t.Errorf("expected interaction type 'meeting', got %q", interaction.InteractionType)
+		}
+
+		// Verify notes contains event summary
+		if interaction.Notes != "Team Standup" {
+			t.Errorf("expected notes 'Team Standup', got %q", interaction.Notes)
+		}
+
+		// Verify timestamp matches event start
+		expectedTime, _ := time.Parse(time.RFC3339, "2025-11-28T10:00:00Z")
+		if !interaction.Timestamp.Equal(expectedTime) {
+			t.Errorf("expected timestamp %v, got %v", expectedTime, interaction.Timestamp)
+		}
+	}
+}
+
+func TestLogInteraction_StoresMetadataJSON(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	// Create test contact
+	contact := &models.Contact{Name: "Alice", Email: "alice@example.com"}
+	if err := db.CreateContact(database, contact); err != nil {
+		t.Fatalf("failed to create contact: %v", err)
+	}
+
+	// Create test event with all metadata fields
+	event := &calendar.Event{
+		Id:      "cal-event-123",
+		Summary: "Important Meeting",
+		Start: &calendar.EventDateTime{
+			DateTime: "2025-11-28T14:00:00Z",
+		},
+		End: &calendar.EventDateTime{
+			DateTime: "2025-11-28T15:30:00Z",
+		},
+		Location: "Room 42",
+		Attendees: []*calendar.EventAttendee{
+			{Email: "alice@example.com"},
+			{Email: "bob@example.com"},
+			{Email: "charlie@example.com"},
+		},
+	}
+
+	// Log interaction
+	err := logInteraction(database, event, []uuid.UUID{contact.ID})
+	if err != nil {
+		t.Fatalf("logInteraction failed: %v", err)
+	}
+
+	// Query the metadata directly from database
+	var metadataJSON string
+	query := `SELECT metadata FROM interaction_log WHERE contact_id = ?`
+	err = database.QueryRow(query, contact.ID.String()).Scan(&metadataJSON)
+	if err != nil {
+		t.Fatalf("failed to query metadata: %v", err)
+	}
+
+	// Parse metadata JSON
+	var metadata map[string]interface{}
+	if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
+		t.Fatalf("failed to parse metadata JSON: %v", err)
+	}
+
+	// Verify metadata fields
+	if metadata["calendar_event_id"] != "cal-event-123" {
+		t.Errorf("expected calendar_event_id 'cal-event-123', got %v", metadata["calendar_event_id"])
+	}
+	if metadata["location"] != "Room 42" {
+		t.Errorf("expected location 'Room 42', got %v", metadata["location"])
+	}
+	if metadata["attendee_count"] != float64(3) {
+		t.Errorf("expected attendee_count 3, got %v", metadata["attendee_count"])
+	}
+	if metadata["duration_minutes"] != float64(90) {
+		t.Errorf("expected duration_minutes 90, got %v", metadata["duration_minutes"])
+	}
+}
+
+func TestLogInteraction_CalculatesDurationCorrectly(t *testing.T) {
+	testCases := []struct {
+		name             string
+		startTime        string
+		endTime          string
+		expectedDuration int
+	}{
+		{
+			name:             "30 minute meeting",
+			startTime:        "2025-11-28T10:00:00Z",
+			endTime:          "2025-11-28T10:30:00Z",
+			expectedDuration: 30,
+		},
+		{
+			name:             "1 hour meeting",
+			startTime:        "2025-11-28T14:00:00Z",
+			endTime:          "2025-11-28T15:00:00Z",
+			expectedDuration: 60,
+		},
+		{
+			name:             "90 minute meeting",
+			startTime:        "2025-11-28T09:00:00Z",
+			endTime:          "2025-11-28T10:30:00Z",
+			expectedDuration: 90,
+		},
+		{
+			name:             "15 minute standup",
+			startTime:        "2025-11-28T09:00:00Z",
+			endTime:          "2025-11-28T09:15:00Z",
+			expectedDuration: 15,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			database := setupTestDB(t)
+			defer func() { _ = database.Close() }()
+
+			contact := &models.Contact{Name: "Alice", Email: "alice@example.com"}
+			if err := db.CreateContact(database, contact); err != nil {
+				t.Fatalf("failed to create contact: %v", err)
+			}
+
+			event := &calendar.Event{
+				Id:      "event1",
+				Summary: tc.name,
+				Start: &calendar.EventDateTime{
+					DateTime: tc.startTime,
+				},
+				End: &calendar.EventDateTime{
+					DateTime: tc.endTime,
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "alice@example.com"},
+				},
+			}
+
+			err := logInteraction(database, event, []uuid.UUID{contact.ID})
+			if err != nil {
+				t.Fatalf("logInteraction failed: %v", err)
+			}
+
+			// Query and verify duration
+			var metadataJSON string
+			query := `SELECT metadata FROM interaction_log WHERE contact_id = ?`
+			err = database.QueryRow(query, contact.ID.String()).Scan(&metadataJSON)
+			if err != nil {
+				t.Fatalf("failed to query metadata: %v", err)
+			}
+
+			var metadata map[string]interface{}
+			if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
+				t.Fatalf("failed to parse metadata JSON: %v", err)
+			}
+
+			duration := int(metadata["duration_minutes"].(float64))
+			if duration != tc.expectedDuration {
+				t.Errorf("expected duration %d minutes, got %d", tc.expectedDuration, duration)
+			}
+		})
+	}
+}
+
+func TestLogInteraction_HandlesNilLocation(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	contact := &models.Contact{Name: "Alice", Email: "alice@example.com"}
+	if err := db.CreateContact(database, contact); err != nil {
+		t.Fatalf("failed to create contact: %v", err)
+	}
+
+	// Event with no location
+	event := &calendar.Event{
+		Id:      "event1",
+		Summary: "Virtual Meeting",
+		Start: &calendar.EventDateTime{
+			DateTime: "2025-11-28T10:00:00Z",
+		},
+		End: &calendar.EventDateTime{
+			DateTime: "2025-11-28T11:00:00Z",
+		},
+		Location: "", // Empty location
+		Attendees: []*calendar.EventAttendee{
+			{Email: "alice@example.com"},
+		},
+	}
+
+	err := logInteraction(database, event, []uuid.UUID{contact.ID})
+	if err != nil {
+		t.Fatalf("logInteraction failed: %v", err)
+	}
+
+	// Verify metadata contains empty location (not error)
+	var metadataJSON string
+	query := `SELECT metadata FROM interaction_log WHERE contact_id = ?`
+	err = database.QueryRow(query, contact.ID.String()).Scan(&metadataJSON)
+	if err != nil {
+		t.Fatalf("failed to query metadata: %v", err)
+	}
+
+	var metadata map[string]interface{}
+	if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
+		t.Fatalf("failed to parse metadata JSON: %v", err)
+	}
+
+	if metadata["location"] != "" {
+		t.Errorf("expected empty location, got %v", metadata["location"])
+	}
+}
+
+func TestLogInteraction_UpdatesCadence(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	contact := &models.Contact{Name: "Alice", Email: "alice@example.com"}
+	if err := db.CreateContact(database, contact); err != nil {
+		t.Fatalf("failed to create contact: %v", err)
+	}
+
+	event := &calendar.Event{
+		Id:      "event1",
+		Summary: "Meeting",
+		Start: &calendar.EventDateTime{
+			DateTime: "2025-11-28T10:00:00Z",
+		},
+		End: &calendar.EventDateTime{
+			DateTime: "2025-11-28T11:00:00Z",
+		},
+		Attendees: []*calendar.EventAttendee{
+			{Email: "alice@example.com"},
+		},
+	}
+
+	// Log interaction
+	err := logInteraction(database, event, []uuid.UUID{contact.ID})
+	if err != nil {
+		t.Fatalf("logInteraction failed: %v", err)
+	}
+
+	// Verify cadence was updated
+	cadence, err := db.GetContactCadence(database, contact.ID)
+	if err != nil {
+		t.Fatalf("failed to get contact cadence: %v", err)
+	}
+	if cadence == nil {
+		t.Fatal("expected cadence to be created, got nil")
+	}
+
+	// Verify last interaction date is set
+	if cadence.LastInteractionDate == nil {
+		t.Error("expected last_interaction_date to be set")
+	} else {
+		expectedTime, _ := time.Parse(time.RFC3339, "2025-11-28T10:00:00Z")
+		if !cadence.LastInteractionDate.Equal(expectedTime) {
+			t.Errorf("expected last_interaction_date %v, got %v", expectedTime, *cadence.LastInteractionDate)
+		}
+	}
+
+	// Verify next followup date is set (30 days after by default)
+	if cadence.NextFollowupDate == nil {
+		t.Error("expected next_followup_date to be set")
 	}
 }

@@ -4,6 +4,7 @@ package sync
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -193,15 +194,21 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 			}
 
 			// Extract contacts from attendees
-			_, err := extractContacts(database, event, userEmail, matcher)
+			contactIDs, err := extractContacts(database, event, userEmail, matcher)
 			if err != nil {
 				// Log error but continue processing other events
 				fmt.Printf("  ✗ Failed to extract contacts from event %q: %v\n", event.Summary, err)
 				continue
 			}
 
-			// TODO (Task 5-6): Log interaction and update sync log
-			// For now, just count as processed
+			// Log interaction for each contact
+			if len(contactIDs) > 0 {
+				if err := logInteraction(database, event, contactIDs); err != nil {
+					// Log error but continue processing other events
+					fmt.Printf("  ✗ Failed to log interaction for event %q: %v\n", event.Summary, err)
+					continue
+				}
+			}
 		}
 
 		// Check for next page
@@ -292,4 +299,66 @@ func extractContacts(database *sql.DB, event *calendar.Event, userEmail string, 
 	}
 
 	return contactIDs, nil
+}
+
+// calculateDuration calculates the duration in minutes between start and end times
+func calculateDuration(event *calendar.Event) int {
+	if event.Start == nil || event.End == nil {
+		return 0
+	}
+
+	startTime, err := time.Parse(time.RFC3339, event.Start.DateTime)
+	if err != nil {
+		return 0
+	}
+
+	endTime, err := time.Parse(time.RFC3339, event.End.DateTime)
+	if err != nil {
+		return 0
+	}
+
+	duration := endTime.Sub(startTime)
+	return int(duration.Minutes())
+}
+
+// logInteraction creates interaction_log entries for all attendees/contacts from a calendar event
+func logInteraction(database *sql.DB, event *calendar.Event, contactIDs []uuid.UUID) error {
+	// Parse event start time
+	startTime, err := time.Parse(time.RFC3339, event.Start.DateTime)
+	if err != nil {
+		return fmt.Errorf("failed to parse event start time: %w", err)
+	}
+
+	// Calculate duration
+	durationMinutes := calculateDuration(event)
+
+	// Build metadata
+	metadata := map[string]interface{}{
+		"calendar_event_id": event.Id,
+		"location":          event.Location,
+		"duration_minutes":  durationMinutes,
+		"attendee_count":    len(event.Attendees),
+	}
+
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	// Create one interaction per contact
+	for _, contactID := range contactIDs {
+		interaction := &models.InteractionLog{
+			ContactID:       contactID,
+			InteractionType: models.InteractionMeeting,
+			Timestamp:       startTime,
+			Notes:           event.Summary,
+			Metadata:        string(metadataJSON),
+		}
+
+		if err := db.LogInteraction(database, interaction); err != nil {
+			return fmt.Errorf("failed to log interaction for contact %s: %w", contactID, err)
+		}
+	}
+
+	return nil
 }

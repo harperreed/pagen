@@ -187,8 +187,8 @@ func LogInteraction(db *sql.DB, interaction *models.InteractionLog) error {
 	// Insert interaction
 	query := `
 		INSERT INTO interaction_log (
-			id, contact_id, interaction_type, timestamp, notes, sentiment
-		) VALUES (?, ?, ?, ?, ?, ?)
+			id, contact_id, interaction_type, timestamp, notes, sentiment, metadata
+		) VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err := db.Exec(query,
@@ -198,6 +198,7 @@ func LogInteraction(db *sql.DB, interaction *models.InteractionLog) error {
 		interaction.Timestamp,
 		interaction.Notes,
 		interaction.Sentiment,
+		interaction.Metadata,
 	)
 	if err != nil {
 		return err
@@ -217,7 +218,7 @@ func LogInteraction(db *sql.DB, interaction *models.InteractionLog) error {
 // GetInteractionHistory retrieves interaction history for a contact
 func GetInteractionHistory(db *sql.DB, contactID uuid.UUID, limit int) ([]models.InteractionLog, error) {
 	query := `
-		SELECT id, contact_id, interaction_type, timestamp, notes, sentiment
+		SELECT id, contact_id, interaction_type, timestamp, notes, sentiment, metadata
 		FROM interaction_log
 		WHERE contact_id = ?
 		ORDER BY timestamp DESC
@@ -236,7 +237,7 @@ func GetInteractionHistory(db *sql.DB, contactID uuid.UUID, limit int) ([]models
 	for rows.Next() {
 		var i models.InteractionLog
 		var id, contactID string
-		err := rows.Scan(&id, &contactID, &i.InteractionType, &i.Timestamp, &i.Notes, &i.Sentiment)
+		err := rows.Scan(&id, &contactID, &i.InteractionType, &i.Timestamp, &i.Notes, &i.Sentiment, &i.Metadata)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +252,7 @@ func GetInteractionHistory(db *sql.DB, contactID uuid.UUID, limit int) ([]models
 // GetRecentInteractions gets all recent interactions across all contacts
 func GetRecentInteractions(db *sql.DB, days int, limit int) ([]models.InteractionLog, error) {
 	query := `
-		SELECT id, contact_id, interaction_type, timestamp, notes, sentiment
+		SELECT id, contact_id, interaction_type, timestamp, notes, sentiment, metadata
 		FROM interaction_log
 		WHERE timestamp >= datetime('now', '-' || ? || ' days')
 		ORDER BY timestamp DESC
@@ -270,7 +271,7 @@ func GetRecentInteractions(db *sql.DB, days int, limit int) ([]models.Interactio
 	for rows.Next() {
 		var i models.InteractionLog
 		var id, contactID string
-		err := rows.Scan(&id, &contactID, &i.InteractionType, &i.Timestamp, &i.Notes, &i.Sentiment)
+		err := rows.Scan(&id, &contactID, &i.InteractionType, &i.Timestamp, &i.Notes, &i.Sentiment, &i.Metadata)
 		if err != nil {
 			return nil, err
 		}

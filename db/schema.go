@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS interaction_log (
 	timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	notes TEXT,
 	sentiment TEXT CHECK(sentiment IN ('positive', 'neutral', 'negative')),
+	metadata TEXT,
 	FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
 );
 

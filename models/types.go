@@ -147,6 +147,7 @@ type InteractionLog struct {
 	Timestamp       time.Time `json:"timestamp"`
 	Notes           string    `json:"notes,omitempty"`
 	Sentiment       *string   `json:"sentiment,omitempty"`
+	Metadata        string    `json:"metadata,omitempty"`
 }
 
 // FollowupContact combines Contact with cadence info for follow-up views
