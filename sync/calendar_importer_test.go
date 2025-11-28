@@ -9,6 +9,7 @@ import (
 	"google.golang.org/api/calendar/v3"
 
 	"github.com/harperreed/pagen/db"
+	"github.com/harperreed/pagen/models"
 )
 
 // Real unit tests that verify actual behavior
@@ -786,5 +787,224 @@ func TestShouldSkipEvent_EdgeCases(t *testing.T) {
 				t.Errorf("expected message %q, got %q", tc.expectedMsg, msg)
 			}
 		})
+	}
+}
+
+// Attendee → Contact Mapping Tests
+
+func TestExtractContacts_SkipsUserEmail(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	// Create a ContactMatcher with no existing contacts
+	matcher := NewContactMatcher([]models.Contact{})
+
+	event := &calendar.Event{
+		Id:      "event1",
+		Summary: "Team Meeting",
+		Attendees: []*calendar.EventAttendee{
+			{Email: "user@example.com", DisplayName: "Me", Self: true},
+			{Email: "alice@example.com", DisplayName: "Alice"},
+			{Email: "bob@example.com", DisplayName: "Bob"},
+		},
+	}
+
+	contactIDs, err := extractContacts(database, event, "user@example.com", matcher)
+	if err != nil {
+		t.Fatalf("extractContacts failed: %v", err)
+	}
+
+	// Should have created 2 contacts (not 3, since user is skipped)
+	if len(contactIDs) != 2 {
+		t.Errorf("expected 2 contact IDs, got %d", len(contactIDs))
+	}
+
+	// Verify contacts were created in database
+	contacts, err := db.FindContacts(database, "", nil, 10)
+	if err != nil {
+		t.Fatalf("failed to find contacts: %v", err)
+	}
+	if len(contacts) != 2 {
+		t.Errorf("expected 2 contacts in database, got %d", len(contacts))
+	}
+
+	// Verify emails are correct
+	emails := make(map[string]bool)
+	for _, c := range contacts {
+		emails[c.Email] = true
+	}
+	if !emails["alice@example.com"] {
+		t.Error("expected alice@example.com to be created")
+	}
+	if !emails["bob@example.com"] {
+		t.Error("expected bob@example.com to be created")
+	}
+	if emails["user@example.com"] {
+		t.Error("user@example.com should not be created")
+	}
+}
+
+func TestExtractContacts_ReusesExistingContacts(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	// Create an existing contact
+	existingContact := &models.Contact{
+		Name:  "Alice Smith",
+		Email: "alice@example.com",
+	}
+	if err := db.CreateContact(database, existingContact); err != nil {
+		t.Fatalf("failed to create existing contact: %v", err)
+	}
+
+	// Create matcher with existing contact
+	allContacts, err := db.FindContacts(database, "", nil, 100)
+	if err != nil {
+		t.Fatalf("failed to find contacts: %v", err)
+	}
+	matcher := NewContactMatcher(allContacts)
+
+	event := &calendar.Event{
+		Id:      "event1",
+		Summary: "Team Meeting",
+		Attendees: []*calendar.EventAttendee{
+			{Email: "user@example.com", DisplayName: "Me", Self: true},
+			{Email: "alice@example.com", DisplayName: "Alice"}, // Existing
+			{Email: "bob@example.com", DisplayName: "Bob"},     // New
+		},
+	}
+
+	contactIDs, err := extractContacts(database, event, "user@example.com", matcher)
+	if err != nil {
+		t.Fatalf("extractContacts failed: %v", err)
+	}
+
+	// Should have returned 2 contact IDs
+	if len(contactIDs) != 2 {
+		t.Errorf("expected 2 contact IDs, got %d", len(contactIDs))
+	}
+
+	// Verify only 2 contacts in database (no duplicate alice)
+	contacts, err := db.FindContacts(database, "", nil, 10)
+	if err != nil {
+		t.Fatalf("failed to find contacts: %v", err)
+	}
+	if len(contacts) != 2 {
+		t.Errorf("expected 2 contacts in database (no duplicates), got %d", len(contacts))
+	}
+
+	// Verify existing contact ID is in the returned IDs
+	foundExisting := false
+	for _, id := range contactIDs {
+		if id == existingContact.ID {
+			foundExisting = true
+			break
+		}
+	}
+	if !foundExisting {
+		t.Error("expected existing contact ID to be in returned IDs")
+	}
+}
+
+func TestExtractContacts_CreatesNewContacts(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	// Create a ContactMatcher with no existing contacts
+	matcher := NewContactMatcher([]models.Contact{})
+
+	event := &calendar.Event{
+		Id:      "event1",
+		Summary: "Team Meeting",
+		Attendees: []*calendar.EventAttendee{
+			{Email: "alice@example.com", DisplayName: "Alice Smith"},
+			{Email: "bob@example.com", DisplayName: "Bob Jones"},
+		},
+	}
+
+	contactIDs, err := extractContacts(database, event, "user@example.com", matcher)
+	if err != nil {
+		t.Fatalf("extractContacts failed: %v", err)
+	}
+
+	// Should have created 2 contacts
+	if len(contactIDs) != 2 {
+		t.Errorf("expected 2 contact IDs, got %d", len(contactIDs))
+	}
+
+	// Verify contacts were created with correct data
+	contacts, err := db.FindContacts(database, "", nil, 10)
+	if err != nil {
+		t.Fatalf("failed to find contacts: %v", err)
+	}
+	if len(contacts) != 2 {
+		t.Errorf("expected 2 contacts in database, got %d", len(contacts))
+	}
+
+	// Verify names were set from DisplayName
+	for _, c := range contacts {
+		if c.Email == "alice@example.com" && c.Name != "Alice Smith" {
+			t.Errorf("expected Alice Smith, got %s", c.Name)
+		}
+		if c.Email == "bob@example.com" && c.Name != "Bob Jones" {
+			t.Errorf("expected Bob Jones, got %s", c.Name)
+		}
+	}
+}
+
+func TestExtractContacts_SkipsAttendeesWithNoEmail(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	matcher := NewContactMatcher([]models.Contact{})
+
+	event := &calendar.Event{
+		Id:      "event1",
+		Summary: "Team Meeting",
+		Attendees: []*calendar.EventAttendee{
+			{Email: "", DisplayName: "No Email Person"},
+			{Email: "alice@example.com", DisplayName: "Alice"},
+		},
+	}
+
+	contactIDs, err := extractContacts(database, event, "user@example.com", matcher)
+	if err != nil {
+		t.Fatalf("extractContacts failed: %v", err)
+	}
+
+	// Should have created only 1 contact (skipped the one with no email)
+	if len(contactIDs) != 1 {
+		t.Errorf("expected 1 contact ID, got %d", len(contactIDs))
+	}
+
+	contacts, err := db.FindContacts(database, "", nil, 10)
+	if err != nil {
+		t.Fatalf("failed to find contacts: %v", err)
+	}
+	if len(contacts) != 1 {
+		t.Errorf("expected 1 contact in database, got %d", len(contacts))
+	}
+}
+
+func TestExtractContacts_HandlesEmptyAttendees(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	matcher := NewContactMatcher([]models.Contact{})
+
+	event := &calendar.Event{
+		Id:        "event1",
+		Summary:   "Solo Event",
+		Attendees: []*calendar.EventAttendee{},
+	}
+
+	contactIDs, err := extractContacts(database, event, "user@example.com", matcher)
+	if err != nil {
+		t.Fatalf("extractContacts failed: %v", err)
+	}
+
+	// Should return empty list
+	if len(contactIDs) != 0 {
+		t.Errorf("expected 0 contact IDs, got %d", len(contactIDs))
 	}
 }

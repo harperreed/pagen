@@ -5,12 +5,15 @@ package sync
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/googleapi"
 
 	"github.com/harperreed/pagen/db"
+	"github.com/harperreed/pagen/models"
 )
 
 const (
@@ -83,6 +86,17 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 		return fmt.Errorf("failed to get user calendar info: %w", err)
 	}
 	userEmail := calendarInfo.Id
+
+	// Load all existing contacts for matching
+	allContacts, err := db.FindContacts(database, "", nil, 10000)
+	if err != nil {
+		errMsg := err.Error()
+		_ = db.UpdateSyncStatus(database, calendarService, "error", &errMsg)
+		return fmt.Errorf("failed to load existing contacts: %w", err)
+	}
+
+	// Create ContactMatcher for deduplication
+	matcher := NewContactMatcher(allContacts)
 
 	// Get current sync state
 	state, err := db.GetSyncState(database, calendarService)
@@ -179,7 +193,15 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 				continue
 			}
 
-			// TODO (Task 4-6): Process event - extract attendees and log interaction
+			// Extract contacts from attendees
+			_, err := extractContacts(database, event, userEmail, matcher)
+			if err != nil {
+				// Log error but continue processing other events
+				fmt.Printf("  ✗ Failed to extract contacts from event %q: %v\n", event.Summary, err)
+				continue
+			}
+
+			// TODO (Task 5-6): Log interaction and update sync log
 			// For now, just count as processed
 		}
 
@@ -226,4 +248,48 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 	fmt.Println("Sync token saved. Next sync will be incremental.")
 
 	return nil
+}
+
+// extractContacts extracts attendees from a calendar event and creates/matches contacts
+// Returns a list of contact IDs for all attendees (excluding the user)
+func extractContacts(database *sql.DB, event *calendar.Event, userEmail string, matcher *ContactMatcher) ([]uuid.UUID, error) {
+	var contactIDs []uuid.UUID
+
+	// Iterate through event attendees
+	for _, attendee := range event.Attendees {
+		// Skip attendees with no email
+		if attendee.Email == "" {
+			continue
+		}
+
+		// Skip the user themselves (using Self flag or email match)
+		normalizedAttendeeEmail := strings.ToLower(strings.TrimSpace(attendee.Email))
+		normalizedUserEmail := strings.ToLower(strings.TrimSpace(userEmail))
+		if attendee.Self || normalizedAttendeeEmail == normalizedUserEmail {
+			continue
+		}
+
+		// Check if contact exists using ContactMatcher
+		existingContact, found := matcher.FindMatch(attendee.Email, attendee.DisplayName)
+		if found {
+			// Use existing contact ID
+			contactIDs = append(contactIDs, existingContact.ID)
+		} else {
+			// Create new contact
+			newContact := &models.Contact{
+				Name:  attendee.DisplayName,
+				Email: attendee.Email,
+			}
+			if err := db.CreateContact(database, newContact); err != nil {
+				return nil, fmt.Errorf("failed to create contact for %s: %w", attendee.Email, err)
+			}
+			contactIDs = append(contactIDs, newContact.ID)
+
+			// Add to matcher so we can deduplicate within the same event
+			// (though events shouldn't have duplicate attendees)
+			matcher.byEmail[normalizedAttendeeEmail] = newContact
+		}
+	}
+
+	return contactIDs, nil
 }
