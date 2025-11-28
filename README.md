@@ -288,6 +288,121 @@ Visit `/followups` for:
 - One-click interaction logging via HTMX
 - Priority-based sorting
 
+## Google Sync
+
+**Phase 1 Foundation** - Import contacts from Google Contacts into your local CRM database.
+
+Pagen can sync your Google Contacts directly into the local SQLite database, creating a unified contact management experience. This foundation enables future features like bidirectional sync, automated updates, and relationship mapping.
+
+### Features
+
+- **One-Time OAuth Setup** - Authenticate with Google using industry-standard OAuth 2.0 flow
+- **Selective Import** - Import all contacts or just recent ones (last 6 months)
+- **Smart Mapping** - Maps Google contact fields to pagen's schema (names, emails, phones, companies)
+- **XDG-Compliant Storage** - Credentials stored securely in `~/.local/share/pagen/`
+- **Duplicate Prevention** - Won't create duplicate contacts (Phase 1 doesn't update existing)
+
+### Setup Instructions
+
+#### 1. Create Google Cloud Project
+
+1. Visit the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project (or select an existing one)
+3. Enable the **Google People API**:
+   - Navigate to "APIs & Services" > "Library"
+   - Search for "Google People API"
+   - Click "Enable"
+
+#### 2. Create OAuth 2.0 Credentials
+
+1. Go to "APIs & Services" > "Credentials"
+2. Click "Create Credentials" > "OAuth client ID"
+3. Select application type: **Desktop app**
+4. Give it a name (e.g., "Pagen Desktop")
+5. Click "Create"
+6. Download the JSON credentials (optional - you just need the Client ID and Secret)
+
+#### 3. Configure Environment Variables
+
+Set your OAuth credentials as environment variables:
+
+```bash
+export GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+export GOOGLE_CLIENT_SECRET="your-client-secret"
+```
+
+Add these to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.) to make them permanent.
+
+### Usage
+
+#### Initialize Google OAuth (One-Time)
+
+Run the init command to authenticate with Google:
+
+```bash
+pagen sync init
+```
+
+This will:
+1. Open your default browser to Google's OAuth consent screen
+2. Ask you to select your Google account and grant permissions
+3. Save the access token to `~/.local/share/pagen/google-credentials.json`
+4. Display a success message
+
+**Note:** The OAuth flow uses `http://localhost:8080` as the redirect URI. Make sure this port is available.
+
+#### Import Contacts
+
+After initialization, import your Google Contacts:
+
+```bash
+# Import all contacts
+pagen sync contacts
+
+# Initial sync - only import contacts modified in last 6 months
+pagen sync contacts --initial
+```
+
+The import will:
+- Fetch contacts from Google People API
+- Map fields to pagen's schema (names → name, emails → email, phones → phone)
+- Extract company names from organization fields
+- Create company records if they don't exist
+- Link contacts to companies
+- Skip contacts that already exist (based on name matching in Phase 1)
+
+### Storage Locations
+
+- **OAuth Tokens:** `~/.local/share/pagen/google-credentials.json`
+- **CRM Database:** `~/.local/share/pagen/pagen.db`
+
+Both paths follow XDG Base Directory specifications.
+
+### Phase 1 Limitations
+
+This is the foundation layer for Google integration. Current limitations:
+
+- **Import Only** - No bidirectional sync (updates in pagen don't sync back to Google)
+- **No Update Detection** - Won't update existing contacts with changes from Google
+- **Manual Sync** - No automatic background sync (run `sync contacts` manually)
+- **Simple Matching** - Uses name-based duplicate detection
+
+Future phases will add bidirectional sync, automated updates, relationship syncing, and more sophisticated conflict resolution.
+
+### Troubleshooting
+
+**"Missing environment variables" error:**
+- Verify `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set: `env | grep GOOGLE`
+
+**OAuth flow doesn't open browser:**
+- The URL will be printed to the terminal - copy and paste it manually
+
+**Port 8080 already in use:**
+- Stop any services using port 8080, or wait for the OAuth flow to use a random available port
+
+**"API not enabled" error:**
+- Ensure Google People API is enabled in your Google Cloud Console project
+
 ## Database
 
 The server uses SQLite and stores data at:
