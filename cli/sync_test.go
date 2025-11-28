@@ -1,0 +1,139 @@
+// ABOUTME: Tests for Google sync CLI commands
+// ABOUTME: Verifies OAuth setup, calendar sync, and error handling
+package cli
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/harperreed/pagen/db"
+	"github.com/harperreed/pagen/sync"
+	"golang.org/x/oauth2"
+)
+
+// TestSyncCalendarCommand_NoToken verifies error when no token exists
+func TestSyncCalendarCommand_NoToken(t *testing.T) {
+	// Create temp database
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "test.db")
+	database, err := db.OpenDatabase(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer func() { _ = database.Close() }()
+
+	// Ensure no token file exists
+	tokenPath := sync.TokenPath()
+	_ = os.Remove(tokenPath)
+
+	// Run command - should fail with helpful error
+	err = SyncCalendarCommand(database, []string{})
+	if err == nil {
+		t.Error("Expected error when token doesn't exist, got nil")
+	}
+
+	// Verify error message is helpful
+	expectedMsg := "no authentication token found"
+	if err != nil && !contains(err.Error(), expectedMsg) {
+		t.Errorf("Expected error to contain %q, got: %v", expectedMsg, err)
+	}
+}
+
+// TestSyncCalendarCommand_ParsesInitialFlag verifies --initial flag parsing
+func TestSyncCalendarCommand_ParsesInitialFlag(t *testing.T) {
+	// Create temp database
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "test.db")
+	database, err := db.OpenDatabase(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer func() { _ = database.Close() }()
+
+	// Create a fake token file for this test
+	tokenPath := sync.TokenPath()
+	tokenDir := filepath.Dir(tokenPath)
+	if err := os.MkdirAll(tokenDir, 0755); err != nil {
+		t.Fatalf("Failed to create token directory: %v", err)
+	}
+
+	// Create minimal fake token
+	fakeToken := &oauth2.Token{
+		AccessToken: "fake-access-token",
+	}
+	if err := sync.SaveToken(fakeToken); err != nil {
+		t.Fatalf("Failed to save fake token: %v", err)
+	}
+	defer func() { _ = os.Remove(tokenPath) }()
+
+	// Test with --initial flag
+	// Note: This will fail at client creation since we don't have real credentials
+	// but we're just testing flag parsing, so we expect an error anyway
+	err = SyncCalendarCommand(database, []string{"--initial"})
+
+	// We expect an error (can't create real client), but not a flag parsing error
+	if err == nil {
+		t.Error("Expected error (no real credentials), got nil")
+	}
+
+	// The error should be about client creation, not flag parsing
+	if err != nil && contains(err.Error(), "flag") {
+		t.Errorf("Got flag parsing error: %v", err)
+	}
+}
+
+// TestSyncCalendarCommand_Integration is a full integration test
+// This is skipped by default since it requires real OAuth credentials
+func TestSyncCalendarCommand_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Check if token exists
+	tokenPath := sync.TokenPath()
+	if _, err := os.Stat(tokenPath); os.IsNotExist(err) {
+		t.Skip("Skipping integration test: no OAuth token found. Run 'pagen sync init' first.")
+	}
+
+	// Create temp database
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "test.db")
+	database, err := db.OpenDatabase(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer func() { _ = database.Close() }()
+
+	// Run calendar sync
+	err = SyncCalendarCommand(database, []string{"--initial"})
+	if err != nil {
+		t.Fatalf("Calendar sync failed: %v", err)
+	}
+
+	// Verify sync state was updated
+	syncState, err := db.GetSyncState(database, "calendar")
+	if err != nil {
+		t.Fatalf("Failed to get sync state: %v", err)
+	}
+
+	if syncState == nil {
+		t.Error("Calendar sync state not found")
+	} else if syncState.Status != "success" && syncState.Status != "syncing" {
+		t.Errorf("Expected sync status to be 'success' or 'syncing', got: %s", syncState.Status)
+	}
+}
+
+// contains is a helper to check if a string contains a substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && hasSubstring(s, substr))
+}
+
+func hasSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

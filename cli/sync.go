@@ -111,6 +111,32 @@ func SyncContactsCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
+// SyncCalendarCommand syncs Google Calendar events
+func SyncCalendarCommand(database *sql.DB, args []string) error {
+	fs := flag.NewFlagSet("calendar", flag.ExitOnError)
+	initial := fs.Bool("initial", false, "Full import (last 6 months)")
+	_ = fs.Parse(args)
+
+	// Load OAuth token
+	token, err := sync.LoadToken()
+	if err != nil {
+		return fmt.Errorf("no authentication token found. Run 'pagen sync init' first: %w", err)
+	}
+
+	// Create Calendar client
+	client, err := sync.NewCalendarClient(token)
+	if err != nil {
+		return fmt.Errorf("failed to create Calendar client: %w", err)
+	}
+
+	// Import calendar events
+	if err := sync.ImportCalendar(database, client, *initial); err != nil {
+		return fmt.Errorf("calendar sync failed: %w", err)
+	}
+
+	return nil
+}
+
 // openBrowser attempts to open URL in default browser
 func openBrowser(url string) error {
 	var cmd string
