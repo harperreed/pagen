@@ -21,7 +21,14 @@ func TestImportContact(t *testing.T) {
 	database := setupTestDB(t)
 	defer func() { _ = database.Close() }()
 
+	// Load existing contacts for matcher
+	allContacts, err := db.FindContacts(database, "", nil, 10000)
+	if err != nil {
+		t.Fatalf("failed to load contacts: %v", err)
+	}
+
 	importer := NewContactsImporter(database)
+	importer.matcher = NewContactMatcher(allContacts)
 
 	// Simulate Google Contacts person data
 	contactData := &GoogleContact{

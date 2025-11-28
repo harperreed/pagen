@@ -36,3 +36,4 @@ scratch/
 
 # Worktrees
 .worktrees/
+.env

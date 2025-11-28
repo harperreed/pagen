@@ -88,24 +88,23 @@ func SyncInitCommand(database *sql.DB, args []string) error {
 // SyncContactsCommand syncs Google Contacts
 func SyncContactsCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("contacts", flag.ExitOnError)
-	initial := fs.Bool("initial", false, "Full import (not incremental)")
 	_ = fs.Parse(args)
 
-	// TODO: Real Google API integration
-	// For now, just placeholder
+	// Load OAuth token
+	token, err := sync.LoadToken()
+	if err != nil {
+		return fmt.Errorf("no authentication token found. Run 'pagen sync init' first: %w", err)
+	}
 
-	fmt.Println("Syncing Google Contacts...")
-	fmt.Println("  → Fetching contacts...")
+	// Create People API client
+	client, err := sync.NewPeopleClient(token)
+	if err != nil {
+		return fmt.Errorf("failed to create People API client: %w", err)
+	}
 
-	// Placeholder - will implement real API in next iteration
-	fmt.Println("  ✓ Google API integration pending")
-	fmt.Println("\nTo complete setup:")
-	fmt.Println("1. Enable Google People API in Cloud Console")
-	fmt.Println("2. Run 'pagen sync init' to authenticate")
-	fmt.Println("3. Re-run 'pagen sync contacts'")
-
-	if *initial {
-		fmt.Println("\nNote: --initial flag will be used for full import when API is integrated")
+	// Import contacts
+	if err := sync.ImportContacts(database, client); err != nil {
+		return fmt.Errorf("contacts sync failed: %w", err)
 	}
 
 	return nil
