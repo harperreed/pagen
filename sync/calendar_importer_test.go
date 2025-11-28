@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/api/calendar/v3"
+
 	"github.com/harperreed/pagen/db"
 )
 
@@ -354,4 +356,435 @@ func TestProgressLogging(t *testing.T) {
 
 	t.Log("Progress should be logged to stdout during sync")
 	t.Log("Should include sync type, event counts, and completion status")
+}
+
+// Event Filtering Tests
+
+func TestShouldSkipEvent_AllDayEvents(t *testing.T) {
+	testCases := []struct {
+		name        string
+		event       *calendar.Event
+		userEmail   string
+		shouldSkip  bool
+		expectedMsg string
+	}{
+		{
+			name: "all-day event with date",
+			event: &calendar.Event{
+				Id:      "event1",
+				Summary: "All Day Meeting",
+				Start: &calendar.EventDateTime{
+					Date: "2025-11-28",
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "all-day event",
+		},
+		{
+			name: "timed event with dateTime",
+			event: &calendar.Event{
+				Id:      "event2",
+				Summary: "Regular Meeting",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "user@example.com", Self: true},
+					{Email: "other@example.com"},
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  false,
+			expectedMsg: "",
+		},
+		{
+			name: "event with both date and dateTime prefers date",
+			event: &calendar.Event{
+				Id:      "event3",
+				Summary: "Weird Event",
+				Start: &calendar.EventDateTime{
+					Date:     "2025-11-28",
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "all-day event",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			skip, msg := shouldSkipEvent(tc.event, tc.userEmail)
+			if skip != tc.shouldSkip {
+				t.Errorf("expected shouldSkip=%v, got %v", tc.shouldSkip, skip)
+			}
+			if msg != tc.expectedMsg {
+				t.Errorf("expected message %q, got %q", tc.expectedMsg, msg)
+			}
+		})
+	}
+}
+
+func TestShouldSkipEvent_CancelledEvents(t *testing.T) {
+	testCases := []struct {
+		name        string
+		event       *calendar.Event
+		userEmail   string
+		shouldSkip  bool
+		expectedMsg string
+	}{
+		{
+			name: "cancelled event",
+			event: &calendar.Event{
+				Id:      "event1",
+				Summary: "Cancelled Meeting",
+				Status:  "cancelled",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "cancelled",
+		},
+		{
+			name: "confirmed event",
+			event: &calendar.Event{
+				Id:      "event2",
+				Summary: "Confirmed Meeting",
+				Status:  "confirmed",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "user@example.com", Self: true},
+					{Email: "other@example.com"},
+				},
+			},
+			userEmail:  "user@example.com",
+			shouldSkip: false,
+		},
+		{
+			name: "tentative event",
+			event: &calendar.Event{
+				Id:      "event3",
+				Summary: "Tentative Meeting",
+				Status:  "tentative",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "user@example.com", Self: true},
+					{Email: "other@example.com"},
+				},
+			},
+			userEmail:  "user@example.com",
+			shouldSkip: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			skip, msg := shouldSkipEvent(tc.event, tc.userEmail)
+			if skip != tc.shouldSkip {
+				t.Errorf("expected shouldSkip=%v, got %v", tc.shouldSkip, skip)
+			}
+			if tc.shouldSkip && msg != tc.expectedMsg {
+				t.Errorf("expected message %q, got %q", tc.expectedMsg, msg)
+			}
+		})
+	}
+}
+
+func TestShouldSkipEvent_DeclinedEvents(t *testing.T) {
+	testCases := []struct {
+		name        string
+		event       *calendar.Event
+		userEmail   string
+		shouldSkip  bool
+		expectedMsg string
+	}{
+		{
+			name: "user declined",
+			event: &calendar.Event{
+				Id:      "event1",
+				Summary: "Meeting I Declined",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "other@example.com", ResponseStatus: "accepted"},
+					{Email: "user@example.com", ResponseStatus: "declined", Self: true},
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "declined",
+		},
+		{
+			name: "user accepted",
+			event: &calendar.Event{
+				Id:      "event2",
+				Summary: "Meeting I Accepted",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "other@example.com", ResponseStatus: "accepted"},
+					{Email: "user@example.com", ResponseStatus: "accepted", Self: true},
+				},
+			},
+			userEmail:  "user@example.com",
+			shouldSkip: false,
+		},
+		{
+			name: "user tentative",
+			event: &calendar.Event{
+				Id:      "event3",
+				Summary: "Meeting I'm Tentative About",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "user@example.com", ResponseStatus: "tentative", Self: true},
+					{Email: "other@example.com", ResponseStatus: "accepted"},
+				},
+			},
+			userEmail:  "user@example.com",
+			shouldSkip: false,
+		},
+		{
+			name: "other person declined but not me",
+			event: &calendar.Event{
+				Id:      "event4",
+				Summary: "Meeting Someone Else Declined",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "other@example.com", ResponseStatus: "declined"},
+					{Email: "user@example.com", ResponseStatus: "accepted", Self: true},
+				},
+			},
+			userEmail:  "user@example.com",
+			shouldSkip: false,
+		},
+		{
+			name: "user email not in attendees but using Self flag",
+			event: &calendar.Event{
+				Id:      "event5",
+				Summary: "Meeting with Self Flag",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "calendar@example.com", ResponseStatus: "declined", Self: true},
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "declined",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			skip, msg := shouldSkipEvent(tc.event, tc.userEmail)
+			if skip != tc.shouldSkip {
+				t.Errorf("expected shouldSkip=%v, got %v", tc.shouldSkip, skip)
+			}
+			if tc.shouldSkip && msg != tc.expectedMsg {
+				t.Errorf("expected message %q, got %q", tc.expectedMsg, msg)
+			}
+		})
+	}
+}
+
+func TestShouldSkipEvent_SoloEvents(t *testing.T) {
+	testCases := []struct {
+		name        string
+		event       *calendar.Event
+		userEmail   string
+		shouldSkip  bool
+		expectedMsg string
+	}{
+		{
+			name: "no attendees",
+			event: &calendar.Event{
+				Id:      "event1",
+				Summary: "Solo Event",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: nil,
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "solo event (0 attendees)",
+		},
+		{
+			name: "empty attendees list",
+			event: &calendar.Event{
+				Id:      "event2",
+				Summary: "Solo Event 2",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "solo event (0 attendees)",
+		},
+		{
+			name: "only me",
+			event: &calendar.Event{
+				Id:      "event3",
+				Summary: "Just Me Event",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "user@example.com", Self: true},
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "solo event (1 attendee)",
+		},
+		{
+			name: "me and one other",
+			event: &calendar.Event{
+				Id:      "event4",
+				Summary: "Meeting with Someone",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "user@example.com", Self: true},
+					{Email: "other@example.com"},
+				},
+			},
+			userEmail:  "user@example.com",
+			shouldSkip: false,
+		},
+		{
+			name: "multiple attendees",
+			event: &calendar.Event{
+				Id:      "event5",
+				Summary: "Team Meeting",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "user@example.com", Self: true},
+					{Email: "person1@example.com"},
+					{Email: "person2@example.com"},
+				},
+			},
+			userEmail:  "user@example.com",
+			shouldSkip: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			skip, msg := shouldSkipEvent(tc.event, tc.userEmail)
+			if skip != tc.shouldSkip {
+				t.Errorf("expected shouldSkip=%v, got %v", tc.shouldSkip, skip)
+			}
+			if tc.shouldSkip && msg != tc.expectedMsg {
+				t.Errorf("expected message %q, got %q", tc.expectedMsg, msg)
+			}
+		})
+	}
+}
+
+func TestShouldSkipEvent_EdgeCases(t *testing.T) {
+	testCases := []struct {
+		name        string
+		event       *calendar.Event
+		userEmail   string
+		shouldSkip  bool
+		expectedMsg string
+	}{
+		{
+			name:        "nil event",
+			event:       nil,
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "nil event",
+		},
+		{
+			name: "nil start",
+			event: &calendar.Event{
+				Id:      "event1",
+				Summary: "No Start Time",
+				Start:   nil,
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "missing start time",
+		},
+		{
+			name: "empty user email",
+			event: &calendar.Event{
+				Id:      "event2",
+				Summary: "Regular Meeting",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "person@example.com"},
+					{Email: "person2@example.com"},
+				},
+			},
+			userEmail:  "",
+			shouldSkip: false,
+		},
+		{
+			name: "cancelled all-day event (multiple skip conditions)",
+			event: &calendar.Event{
+				Id:      "event3",
+				Summary: "Cancelled All Day Event",
+				Status:  "cancelled",
+				Start: &calendar.EventDateTime{
+					Date: "2025-11-28",
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "all-day event",
+		},
+		{
+			name: "declined solo event (multiple skip conditions)",
+			event: &calendar.Event{
+				Id:      "event4",
+				Summary: "Declined Solo Event",
+				Start: &calendar.EventDateTime{
+					DateTime: "2025-11-28T10:00:00Z",
+				},
+				Attendees: []*calendar.EventAttendee{
+					{Email: "user@example.com", ResponseStatus: "declined", Self: true},
+				},
+			},
+			userEmail:   "user@example.com",
+			shouldSkip:  true,
+			expectedMsg: "declined",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			skip, msg := shouldSkipEvent(tc.event, tc.userEmail)
+			if skip != tc.shouldSkip {
+				t.Errorf("expected shouldSkip=%v, got %v", tc.shouldSkip, skip)
+			}
+			if tc.shouldSkip && msg != tc.expectedMsg {
+				t.Errorf("expected message %q, got %q", tc.expectedMsg, msg)
+			}
+		})
+	}
 }

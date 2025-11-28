@@ -18,6 +18,55 @@ const (
 	maxResults      = 250 // Google Calendar API max per page
 )
 
+// shouldSkipEvent determines if an event should be skipped during import
+// Returns (true, reason) if the event should be skipped, (false, "") otherwise
+func shouldSkipEvent(event *calendar.Event, userEmail string) (bool, string) {
+	// Check for nil event
+	if event == nil {
+		return true, "nil event"
+	}
+
+	// Check for nil start time
+	if event.Start == nil {
+		return true, "missing start time"
+	}
+
+	// Skip all-day events (event.Start.Date is set instead of DateTime)
+	if event.Start.Date != "" {
+		return true, "all-day event"
+	}
+
+	// Skip cancelled events
+	if event.Status == "cancelled" {
+		return true, "cancelled"
+	}
+
+	// Skip declined events (check if user declined)
+	// Use Self flag to identify the current user's attendee record
+	for _, attendee := range event.Attendees {
+		if attendee.Self && attendee.ResponseStatus == "declined" {
+			return true, "declined"
+		}
+	}
+
+	// Skip solo events (0 or 1 attendees)
+	attendeeCount := len(event.Attendees)
+	if attendeeCount <= 1 {
+		return true, fmt.Sprintf("solo event (%d attendee%s)", attendeeCount, pluralize(attendeeCount))
+	}
+
+	// Don't skip this event
+	return false, ""
+}
+
+// pluralize returns "s" if count != 1, otherwise ""
+func pluralize(count int) string {
+	if count == 1 {
+		return ""
+	}
+	return "s"
+}
+
 // ImportCalendar fetches and imports calendar events from Google Calendar
 func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) error {
 	// Update sync state to 'syncing'
@@ -25,6 +74,15 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 	if err := db.UpdateSyncStatus(database, calendarService, "syncing", nil); err != nil {
 		return fmt.Errorf("failed to update sync status: %w", err)
 	}
+
+	// Get user email from primary calendar for filtering
+	calendarInfo, err := client.CalendarList.Get("primary").Do()
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to get user calendar info: %v", err)
+		_ = db.UpdateSyncStatus(database, calendarService, "error", &errMsg)
+		return fmt.Errorf("failed to get user calendar info: %w", err)
+	}
+	userEmail := calendarInfo.Id
 
 	// Get current sync state
 	state, err := db.GetSyncState(database, calendarService)
@@ -60,6 +118,9 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 	// Fetch events with pagination
 	totalEvents := 0
 	pageToken := ""
+
+	// Track skip counts by reason
+	skipCounts := make(map[string]int)
 
 	for {
 		if pageToken != "" {
@@ -110,6 +171,18 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 			fmt.Printf("  → Fetched %d events (page %d)\n", eventCount, pageNum)
 		}
 
+		// Process events and apply filters
+		for _, event := range events.Items {
+			skip, reason := shouldSkipEvent(event, userEmail)
+			if skip {
+				skipCounts[reason]++
+				continue
+			}
+
+			// TODO (Task 4-6): Process event - extract attendees and log interaction
+			// For now, just count as processed
+		}
+
 		// Check for next page
 		pageToken = events.NextPageToken
 		if pageToken == "" {
@@ -130,7 +203,26 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 		return fmt.Errorf("failed to update sync status: %w", err)
 	}
 
+	// Print summary
 	fmt.Printf("\n✓ Fetched %d events\n", totalEvents)
+
+	// Print skip summary if any events were skipped
+	if len(skipCounts) > 0 {
+		// Calculate total skipped
+		totalSkipped := 0
+		for _, count := range skipCounts {
+			totalSkipped += count
+		}
+
+		// Print individual skip reasons
+		for reason, count := range skipCounts {
+			fmt.Printf("  ✓ Skipped %d %s event%s\n", count, reason, pluralize(count))
+		}
+
+		processedCount := totalEvents - totalSkipped
+		fmt.Printf("\n  → Processing %d meeting%s...\n", processedCount, pluralize(processedCount))
+	}
+
 	fmt.Println("Sync token saved. Next sync will be incremental.")
 
 	return nil
