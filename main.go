@@ -303,6 +303,37 @@ func main() {
 			os.Exit(1)
 		}
 
+	case "sync":
+		// Google sync subcommands
+		finalDBPath := getDatabasePath(*dbPath)
+		database, err := db.OpenDatabase(finalDBPath)
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
+		defer func() { _ = database.Close() }()
+
+		log.Printf("CRM database: %s", finalDBPath)
+
+		if len(commandArgs) == 0 {
+			fmt.Println("Usage: pagen sync <command>")
+			fmt.Println("Commands: init, contacts, calendar, gmail, status, review")
+			os.Exit(1)
+		}
+
+		syncCommand := commandArgs[0]
+		syncArgs := commandArgs[1:]
+
+		switch syncCommand {
+		case "init":
+			if err := cli.SyncInitCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		default:
+			fmt.Printf("Unknown sync command: %s\n", syncCommand)
+			fmt.Println("Commands: init, contacts, calendar, gmail, status, review")
+			os.Exit(1)
+		}
+
 	default:
 		fmt.Printf("Unknown command: %s\n\n", command)
 		printUsage()
