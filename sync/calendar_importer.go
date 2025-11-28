@@ -110,10 +110,10 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 	}
 
 	// Build the events list call
+	// NOTE: OrderBy is incompatible with sync tokens, so we omit it to enable incremental sync
 	call := client.Events.List("primary").
 		MaxResults(maxResults).
-		SingleEvents(true).
-		OrderBy("startTime")
+		SingleEvents(true)
 
 	// Use timeMin for initial sync or syncToken for incremental
 	if initial {
