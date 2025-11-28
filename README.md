@@ -395,21 +395,16 @@ pagen sync calendar --initial
 Example output (initial sync):
 
 ```
-Syncing Google Calendar (last 6 months)...
-  → Fetching events...
-  ✓ Fetched 156 events
+Syncing Google Calendar...
+  → Initial sync (last 6 months)...
+  → Fetched 156 events (page 1)
+
+✓ Fetched 156 events
   ✓ Skipped 23 all-day events
   ✓ Skipped 8 declined events
   ✓ Skipped 12 solo events
 
   → Processing 113 meetings...
-  ✓ Created 47 new contacts from attendees
-  ✓ Logged 113 interactions
-
-Summary:
-  New contacts: 47
-  Interactions: 113 logged
-
 Sync token saved. Next sync will be incremental.
 ```
 
@@ -417,11 +412,14 @@ Example output (incremental sync):
 
 ```
 Syncing Google Calendar...
-  ✓ 3 new events since last sync
-  ✓ 1 updated event
-  ✓ Logged 4 interactions
+  → Incremental sync...
+  → Fetched 4 events (page 1)
 
-All up to date!
+✓ Fetched 4 events
+  ✓ Skipped 1 all-day events
+
+  → Processing 3 meetings...
+Sync token saved. Next sync will be incremental.
 ```
 
 **Event Filtering Rules:**
@@ -459,13 +457,13 @@ Syncing Google Contacts...
   ✓ No changes since last sync
 
 Syncing Google Calendar...
-  ✓ 3 new events
-  ✓ Logged 3 interactions
+  → Incremental sync...
+  → Fetched 3 events (page 1)
 
-Summary:
-  Interactions: 3 logged
+✓ Fetched 3 events
 
-All up to date!
+  → Processing 3 meetings...
+Sync token saved. Next sync will be incremental.
 ```
 
 ### Storage Locations
