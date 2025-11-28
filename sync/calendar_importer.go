@@ -5,7 +5,6 @@ package sync
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -255,6 +254,9 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 func extractContacts(database *sql.DB, event *calendar.Event, userEmail string, matcher *ContactMatcher) ([]uuid.UUID, error) {
 	var contactIDs []uuid.UUID
 
+	// Normalize user email once before the loop
+	normalizedUserEmail := normalizeEmail(userEmail)
+
 	// Iterate through event attendees
 	for _, attendee := range event.Attendees {
 		// Skip attendees with no email
@@ -263,8 +265,7 @@ func extractContacts(database *sql.DB, event *calendar.Event, userEmail string, 
 		}
 
 		// Skip the user themselves (using Self flag or email match)
-		normalizedAttendeeEmail := strings.ToLower(strings.TrimSpace(attendee.Email))
-		normalizedUserEmail := strings.ToLower(strings.TrimSpace(userEmail))
+		normalizedAttendeeEmail := normalizeEmail(attendee.Email)
 		if attendee.Self || normalizedAttendeeEmail == normalizedUserEmail {
 			continue
 		}
@@ -285,9 +286,8 @@ func extractContacts(database *sql.DB, event *calendar.Event, userEmail string, 
 			}
 			contactIDs = append(contactIDs, newContact.ID)
 
-			// Add to matcher so we can deduplicate within the same event
-			// (though events shouldn't have duplicate attendees)
-			matcher.byEmail[normalizedAttendeeEmail] = newContact
+			// Add to matcher to prevent duplicates within the same import session
+			matcher.AddContact(newContact)
 		}
 	}
 

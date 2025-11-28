@@ -66,3 +66,60 @@ func TestExtractDomain(t *testing.T) {
 		}
 	}
 }
+
+func TestAddContact(t *testing.T) {
+	// Start with some existing contacts
+	existing := []models.Contact{
+		{ID: uuid.New(), Name: "Alice", Email: "alice@example.com"},
+	}
+
+	matcher := NewContactMatcher(existing)
+
+	// Add a new contact
+	newContact := &models.Contact{
+		ID:    uuid.New(),
+		Name:  "Bob",
+		Email: "bob@example.com",
+	}
+	matcher.AddContact(newContact)
+
+	// Verify we can find it
+	match, found := matcher.FindMatch("bob@example.com", "")
+	if !found {
+		t.Error("expected to find newly added contact")
+	}
+	if match.ID != newContact.ID {
+		t.Errorf("expected ID %s, got %s", newContact.ID, match.ID)
+	}
+
+	// Test case normalization
+	anotherContact := &models.Contact{
+		ID:    uuid.New(),
+		Name:  "Charlie",
+		Email: "Charlie@Example.COM",
+	}
+	matcher.AddContact(anotherContact)
+
+	// Should find it with lowercase email
+	match, found = matcher.FindMatch("charlie@example.com", "")
+	if !found {
+		t.Error("expected to find contact with normalized email")
+	}
+	if match.ID != anotherContact.ID {
+		t.Errorf("expected ID %s, got %s", anotherContact.ID, match.ID)
+	}
+
+	// Test empty email (should not add)
+	emptyContact := &models.Contact{
+		ID:    uuid.New(),
+		Name:  "NoEmail",
+		Email: "",
+	}
+	matcher.AddContact(emptyContact)
+
+	// Should not be findable
+	_, found = matcher.FindMatch("", "")
+	if found {
+		t.Error("should not find contact with empty email")
+	}
+}

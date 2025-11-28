@@ -39,6 +39,15 @@ func (m *ContactMatcher) FindMatch(email, name string) (*models.Contact, bool) {
 	return contact, found
 }
 
+// AddContact adds a newly created contact to the matcher to prevent duplicates
+// within the same import session.
+func (m *ContactMatcher) AddContact(contact *models.Contact) {
+	email := normalizeEmail(contact.Email)
+	if email != "" {
+		m.byEmail[email] = contact
+	}
+}
+
 // normalizeEmail converts email to lowercase for comparison
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
