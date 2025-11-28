@@ -57,3 +57,47 @@ func TestSchemaIncludesFollowupTables(t *testing.T) {
 		t.Fatalf("priority index not found: %v", err)
 	}
 }
+
+func TestSchemaIncludesSyncTables(t *testing.T) {
+	database := setupTestDB(t)
+	defer func() { _ = database.Close() }()
+
+	// Check sync_state table exists
+	row := database.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='sync_state'`)
+	var tableName string
+	err := row.Scan(&tableName)
+	if err != nil {
+		t.Fatalf("sync_state table not found: %v", err)
+	}
+
+	// Check sync_log table exists
+	row = database.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='sync_log'`)
+	err = row.Scan(&tableName)
+	if err != nil {
+		t.Fatalf("sync_log table not found: %v", err)
+	}
+
+	// Check suggestions table exists
+	row = database.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='suggestions'`)
+	err = row.Scan(&tableName)
+	if err != nil {
+		t.Fatalf("suggestions table not found: %v", err)
+	}
+
+	// Verify indexes
+	indexes := []string{
+		"idx_sync_log_source",
+		"idx_sync_log_entity",
+		"idx_suggestions_status",
+		"idx_suggestions_type",
+	}
+
+	for _, idx := range indexes {
+		row := database.QueryRow(`SELECT name FROM sqlite_master WHERE type='index' AND name=?`, idx)
+		var indexName string
+		err := row.Scan(&indexName)
+		if err != nil {
+			t.Fatalf("index %s not found: %v", idx, err)
+		}
+	}
+}

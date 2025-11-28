@@ -104,6 +104,45 @@ CREATE TABLE IF NOT EXISTS interaction_log (
 
 CREATE INDEX IF NOT EXISTS idx_interaction_log_contact ON interaction_log(contact_id);
 CREATE INDEX IF NOT EXISTS idx_interaction_log_timestamp ON interaction_log(timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS sync_state (
+	service TEXT PRIMARY KEY,
+	last_sync_time DATETIME,
+	last_sync_token TEXT,
+	status TEXT CHECK(status IN ('idle', 'syncing', 'error')),
+	error_message TEXT,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sync_log (
+	id TEXT PRIMARY KEY,
+	source_service TEXT NOT NULL,
+	source_id TEXT NOT NULL,
+	entity_type TEXT NOT NULL,
+	entity_id TEXT NOT NULL,
+	imported_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	metadata TEXT,
+	UNIQUE(source_service, source_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sync_log_source ON sync_log(source_service, source_id);
+CREATE INDEX IF NOT EXISTS idx_sync_log_entity ON sync_log(entity_type, entity_id);
+
+CREATE TABLE IF NOT EXISTS suggestions (
+	id TEXT PRIMARY KEY,
+	type TEXT NOT NULL CHECK(type IN ('deal', 'relationship', 'company')),
+	confidence REAL NOT NULL,
+	source_service TEXT NOT NULL,
+	source_id TEXT,
+	source_data TEXT,
+	status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'accepted', 'rejected')),
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	reviewed_at DATETIME
+);
+
+CREATE INDEX IF NOT EXISTS idx_suggestions_status ON suggestions(status);
+CREATE INDEX IF NOT EXISTS idx_suggestions_type ON suggestions(type);
 `
 
 func InitSchema(db *sql.DB) error {
