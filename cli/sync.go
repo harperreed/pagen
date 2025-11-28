@@ -137,6 +137,46 @@ func SyncCalendarCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
+// SyncResetCommand resets a stuck sync state
+func SyncResetCommand(database *sql.DB, args []string) error {
+	if len(args) == 0 {
+		fmt.Println("Usage: pagen sync reset <service>")
+		fmt.Println("\nAvailable services:")
+		fmt.Println("  calendar - Reset calendar sync state")
+		fmt.Println("  contacts - Reset contacts sync state")
+		fmt.Println("  all      - Reset all sync states")
+		return nil
+	}
+
+	service := args[0]
+
+	if service == "all" {
+		// Reset all services
+		_, err := database.Exec(`UPDATE sync_state SET status='idle', last_sync_time=datetime('now')`)
+		if err != nil {
+			return fmt.Errorf("failed to reset sync states: %w", err)
+		}
+		fmt.Println("✓ Reset all sync states to 'idle'")
+		return nil
+	}
+
+	// Reset specific service
+	result, err := database.Exec(`UPDATE sync_state SET status='idle', last_sync_time=datetime('now') WHERE service=?`, service)
+	if err != nil {
+		return fmt.Errorf("failed to reset sync state for %s: %w", service, err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		fmt.Printf("⚠ No sync state found for service '%s'\n", service)
+		return nil
+	}
+
+	fmt.Printf("✓ Reset %s sync state to 'idle'\n", service)
+	fmt.Println("\nNext sync will be incremental from now.")
+	return nil
+}
+
 // openBrowser attempts to open URL in default browser
 func openBrowser(url string) error {
 	var cmd string

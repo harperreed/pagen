@@ -336,9 +336,13 @@ func main() {
 			if err := cli.SyncCalendarCommand(database, syncArgs); err != nil {
 				log.Fatalf("Error: %v", err)
 			}
+		case "reset":
+			if err := cli.SyncResetCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
 		default:
 			fmt.Printf("Unknown sync command: %s\n", syncCommand)
-			fmt.Println("Commands: init, contacts, calendar, gmail, status, review")
+			fmt.Println("Commands: init, contacts, calendar, reset, status, review")
 			os.Exit(1)
 		}
 
