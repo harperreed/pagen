@@ -158,3 +158,56 @@ type FollowupContact struct {
 	DaysSinceContact     int        `json:"days_since_contact"`
 	NextFollowupDate     *time.Time `json:"next_followup_date,omitempty"`
 }
+
+// Sync status constants
+const (
+	SyncStatusIdle    = "idle"
+	SyncStatusSyncing = "syncing"
+	SyncStatusError   = "error"
+)
+
+// Suggestion type constants
+const (
+	SuggestionTypeDeal         = "deal"
+	SuggestionTypeRelationship = "relationship"
+	SuggestionTypeCompany      = "company"
+)
+
+// Suggestion status constants
+const (
+	SuggestionStatusPending  = "pending"
+	SuggestionStatusAccepted = "accepted"
+	SuggestionStatusRejected = "rejected"
+)
+
+type SyncState struct {
+	Service       string     `json:"service"`
+	LastSyncTime  *time.Time `json:"last_sync_time,omitempty"`
+	LastSyncToken string     `json:"last_sync_token,omitempty"`
+	Status        string     `json:"status"`
+	ErrorMessage  string     `json:"error_message,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+type SyncLog struct {
+	ID            uuid.UUID `json:"id"`
+	SourceService string    `json:"source_service"`
+	SourceID      string    `json:"source_id"`
+	EntityType    string    `json:"entity_type"`
+	EntityID      uuid.UUID `json:"entity_id"`
+	ImportedAt    time.Time `json:"imported_at"`
+	Metadata      string    `json:"metadata,omitempty"`
+}
+
+type Suggestion struct {
+	ID            uuid.UUID  `json:"id"`
+	Type          string     `json:"type"`
+	Confidence    float64    `json:"confidence"`
+	SourceService string     `json:"source_service"`
+	SourceID      string     `json:"source_id,omitempty"`
+	SourceData    string     `json:"source_data,omitempty"`
+	Status        string     `json:"status"`
+	CreatedAt     time.Time  `json:"created_at"`
+	ReviewedAt    *time.Time `json:"reviewed_at,omitempty"`
+}

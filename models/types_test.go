@@ -57,3 +57,30 @@ func TestComputePriorityScore(t *testing.T) {
 		t.Errorf("expected priority score %.1f, got %.1f", expected, score)
 	}
 }
+
+func TestSyncStateDefaults(t *testing.T) {
+	state := &SyncState{
+		Service: "contacts",
+		Status:  SyncStatusIdle,
+	}
+
+	if state.Status != SyncStatusIdle {
+		t.Errorf("expected idle status, got %s", state.Status)
+	}
+}
+
+func TestSuggestionCreation(t *testing.T) {
+	suggestion := &Suggestion{
+		ID:         uuid.New(),
+		Type:       SuggestionTypeDeal,
+		Confidence: 0.85,
+		Status:     SuggestionStatusPending,
+	}
+
+	if suggestion.Confidence != 0.85 {
+		t.Errorf("expected confidence 0.85, got %.2f", suggestion.Confidence)
+	}
+	if suggestion.Status != SuggestionStatusPending {
+		t.Errorf("expected pending status, got %s", suggestion.Status)
+	}
+}
