@@ -116,6 +116,9 @@ func ImportGmail(database *sql.DB, client *gmail.Service, initial bool) error {
 
 		totalProcessed, newContacts, syncErr = syncWithQuery(database, client, userEmail, query, matcher)
 		if syncErr != nil {
+			// Defense in depth: ensure error status is set (syncWithQuery should have already done this)
+			errMsg := syncErr.Error()
+			_ = db.UpdateSyncStatus(database, gmailService, "error", &errMsg)
 			return syncErr
 		}
 	}

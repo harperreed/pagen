@@ -104,9 +104,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case SyncCompleteMsg:
 		return m, m.handleSyncComplete(msg)
-	case SyncStartMsg:
-		m.syncInProgress[msg.Service] = true
-		return m, nil
 	}
 	return m, nil
 }

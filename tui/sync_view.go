@@ -55,14 +55,6 @@ type SyncCompleteMsg struct {
 	Error   error
 }
 
-// SyncStartMsg is sent when a sync operation starts
-type SyncStartMsg struct {
-	Service string
-}
-
-// SyncStatusUpdateMsg is sent to refresh sync status
-type SyncStatusUpdateMsg struct{}
-
 func (m Model) renderSyncView() string {
 	var s strings.Builder
 
@@ -242,8 +234,8 @@ func (m Model) handleSyncKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // syncService triggers a sync for a specific service
 func (m Model) syncService(service string) tea.Cmd {
 	return func() tea.Msg {
-		// Send start message first
-		// (state updates happen in Update() when handling SyncStartMsg)
+		// Note: State updates (syncInProgress, syncMessages) happen in handleSyncKeys
+		// before this Cmd is executed, following bubbletea best practices
 
 		// Update database status
 		_ = db.UpdateSyncStatus(m.db, service, "syncing", nil)
