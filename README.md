@@ -9,6 +9,7 @@ A personal agent toolkit with CRM capabilities. Works both as a Model Context Pr
 - **Deal Pipeline** - Manage sales from prospecting to closed
 - **Relationship Tracking** - Map connections between contacts (colleagues, friends, etc.)
 - **Follow-Up Tracking** - Never lose touch with your network through smart cadence tracking
+- **Google Sync** - Import contacts, calendar meetings, and high-signal emails from Google
 - **Universal Query** - Flexible searching across all entity types
 
 ## Installation
@@ -290,7 +291,7 @@ Visit `/followups` for:
 
 ## Google Sync
 
-Pagen syncs both **Contacts** and **Calendar** data from Google into your local CRM database, creating a unified contact and interaction management experience.
+Pagen syncs **Contacts**, **Calendar**, and **Gmail** data from Google into your local CRM database, creating a unified contact and interaction management experience.
 
 ### Features
 
@@ -307,9 +308,17 @@ Pagen syncs both **Contacts** and **Calendar** data from Google into your local 
 - **Cadence Tracking** - Auto-updates contact follow-up cadences based on interactions
 - **Initial Sync** - Import last 6 months of calendar history
 
+**Gmail Sync:**
+- **High-Signal Only** - Imports only meaningful email interactions (replied-to, starred)
+- **Smart Filtering** - Automatically excludes newsletters, automated emails, and group messages (5+ recipients)
+- **Subject Lines Only** - Stores email subjects for context, NOT email bodies (privacy-focused)
+- **Automatic Contact Creation** - Email senders become contacts with company associations
+- **Interaction Logging** - Each high-signal email becomes an interaction record
+- **Initial & Incremental** - Import last 30 days initially, then sync recent emails
+
 **Shared Features:**
 - **XDG-Compliant Storage** - Credentials stored securely in `~/.local/share/pagen/`
-- **Combined Sync** - Run both contacts and calendar in one command
+- **Combined Sync** - Run contacts, calendar, and gmail in one command
 
 ### Setup Instructions
 
@@ -321,6 +330,7 @@ Pagen syncs both **Contacts** and **Calendar** data from Google into your local 
    - Navigate to "APIs & Services" > "Library"
    - Search for and enable **Google People API** (for contacts)
    - Search for and enable **Google Calendar API** (for calendar)
+   - Search for and enable **Gmail API** (for email sync)
 
 #### 2. Create OAuth 2.0 Credentials
 
@@ -354,11 +364,11 @@ pagen sync init
 
 This will:
 1. Open your default browser to Google's OAuth consent screen
-2. Ask you to select your Google account and grant permissions
+2. Ask you to select your Google account and grant permissions (for Contacts, Calendar, and Gmail)
 3. Save the access token to `~/.local/share/pagen/google-credentials.json`
 4. Display a success message
 
-**Note:** The OAuth flow uses `http://localhost:8080` as the redirect URI. Make sure this port is available.
+**Note:** The OAuth flow uses `http://localhost:8080` as the redirect URI. Make sure this port is available. The OAuth token includes access to all three Google services (People API, Calendar API, and Gmail API).
 
 #### Sync Contacts
 
@@ -442,9 +452,86 @@ Only multi-person meetings you accepted or tentatively accepted are imported.
 5. **Update Cadences** - Adjusts follow-up schedules based on interaction history
 6. **Save Sync Token** - Stores incremental sync state for next run
 
+#### Sync Gmail
+
+Sync high-signal emails from Gmail to track email interactions with contacts:
+
+```bash
+# Incremental sync - fetch recent high-signal emails (last 7 days)
+pagen sync gmail
+
+# Initial sync - import last 30 days of high-signal emails
+pagen sync gmail --initial
+```
+
+Example output (initial sync):
+
+```
+Syncing Gmail...
+  → Initial sync (last 30 days, high-signal only)...
+
+✓ Fetched 87 emails from Gmail
+  ✓ Skipped 12 automated sender
+  ✓ Skipped 8 group email (5+ recipients)
+  ✓ Skipped 3 calendar invite
+
+  → Processed 64 high-signal emails
+  ✓ Created 18 new contacts from email addresses
+  ✓ Logged 64 email interactions
+```
+
+Example output (incremental sync):
+
+```
+Syncing Gmail...
+  → Incremental sync (last 7 days)...
+
+✓ Fetched 23 emails from Gmail
+  ✓ Skipped 3 automated sender
+  ✓ Skipped 2 already imported
+
+  → Processed 18 high-signal emails
+  ✓ Created 2 new contacts from email addresses
+  ✓ Logged 18 email interactions
+```
+
+**What Gets Imported (High-Signal Only):**
+
+Gmail sync only imports emails that indicate meaningful human interaction:
+
+- **Emails you replied to** - Indicates active conversation
+- **Emails you sent that got replies** - Confirmed engagement
+- **Starred emails** - Manually marked as important
+
+**What Gets Filtered Out:**
+
+To avoid noise and focus on real relationships, the sync automatically excludes:
+
+- **Newsletters** - Emails from addresses containing "newsletter", "marketing", etc.
+- **Automated emails** - From "noreply", "notifications", "mailer-daemon", etc.
+- **Group emails** - Messages with 5 or more recipients (To + Cc)
+- **Calendar invites** - Already synced through Calendar sync
+- **Auto-generated** - Out-of-office replies, delivery failures, etc.
+
+**Privacy & Data Storage:**
+
+- **Subject lines only** - Email subjects are stored for context (e.g., "Re: Project discussion")
+- **NO email bodies** - Message content is never stored in your database
+- **Metadata only** - Only records: sender, subject, timestamp, message ID
+
+**What Happens During Sync:**
+
+1. **Build Query** - Constructs Gmail search for high-signal emails only
+2. **Fetch Messages** - Downloads message metadata (headers, not bodies)
+3. **Apply Filters** - Excludes automated, group, and calendar emails
+4. **Extract Contacts** - Parses sender email addresses and names
+5. **Create Contacts** - Adds new contacts with company associations from email domains
+6. **Log Interactions** - Creates interaction records with email subjects
+7. **Track Sync** - Records processed messages to avoid duplicates
+
 #### Combined Sync
 
-Sync both contacts and calendar in one command:
+Sync contacts, calendar, and gmail in one command:
 
 ```bash
 pagen sync
@@ -464,6 +551,16 @@ Syncing Google Calendar...
 
   → Processing 3 meetings...
 Sync token saved. Next sync will be incremental.
+
+Syncing Gmail...
+  → Incremental sync (last 7 days)...
+
+✓ Fetched 12 emails from Gmail
+  ✓ Skipped 2 automated sender
+  ✓ Skipped 1 already imported
+
+  → Processed 9 high-signal emails
+  ✓ Logged 9 email interactions
 ```
 
 ### Storage Locations
@@ -487,6 +584,12 @@ This is the foundation layer for Google integration. Current limitations:
 - **Read-Only** - Calendar events are imported, not modified in Google
 - **Manual Sync** - No automatic background sync (run commands manually)
 - **Basic Filtering** - Simple event type filtering (no content analysis)
+
+**Gmail:**
+- **Import Only** - Emails are imported as interactions, not synced bidirectionally
+- **Manual Sync** - No automatic background sync (run commands manually)
+- **Time-Based Incremental** - Uses date ranges, not Gmail historyId (future improvement)
+- **Subject Lines Only** - Email bodies are never stored (intentional privacy feature)
 
 Future phases will add bidirectional sync, automated updates, relationship syncing, deal detection, and more sophisticated conflict resolution.
 
@@ -531,6 +634,30 @@ Future phases will add bidirectional sync, automated updates, relationship synci
 - Check your internet connection
 - The sync will automatically retry (3 attempts)
 - If it persists, check Google Cloud Console API quotas
+
+#### Gmail Issues
+
+**"Gmail API not enabled" error:**
+- Gmail API must be enabled in Google Cloud Console
+- Visit: https://console.cloud.google.com/apis/library/gmail.googleapis.com
+- Click "Enable" and try syncing again
+
+**"No emails imported" (all emails skipped):**
+- Gmail sync only imports high-signal emails (replied-to, starred)
+- Check if you have emails matching the query criteria
+- Try `--initial` flag to import last 30 days instead of last 7 days
+- Review the "What Gets Filtered Out" section above
+
+**"Failed to fetch messages" error:**
+- Check your internet connection
+- Verify Gmail API is enabled in Google Cloud Console
+- Check API quotas (Gmail has daily limits)
+- Wait a few minutes and try again
+
+**All emails show as "automated sender":**
+- This is working as intended - newsletters and automated emails are filtered out
+- Only human-to-human email interactions are imported
+- Check your starred emails or emails you've replied to
 
 ## Database
 

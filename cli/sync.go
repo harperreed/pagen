@@ -10,7 +10,10 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"strings"
+	"time"
 
+	"github.com/harperreed/pagen/db"
 	"github.com/harperreed/pagen/sync"
 	"golang.org/x/oauth2"
 )
@@ -200,6 +203,118 @@ func SyncResetCommand(database *sql.DB, args []string) error {
 	fmt.Printf("✓ Reset %s sync state to 'idle'\n", service)
 	fmt.Println("\nNext sync will be incremental from now.")
 	return nil
+}
+
+// SyncStatusCommand displays the sync status for all Google services
+func SyncStatusCommand(database *sql.DB, args []string) error {
+	fs := flag.NewFlagSet("status", flag.ExitOnError)
+	_ = fs.Parse(args)
+
+	// Get all sync states
+	states, err := db.GetAllSyncStates(database)
+	if err != nil {
+		return fmt.Errorf("failed to get sync states: %w", err)
+	}
+
+	// If no states exist, show helpful message
+	if len(states) == 0 {
+		fmt.Println("Google Sync Status:")
+		fmt.Println("  No sync data found. Run 'pagen sync init' to set up authentication.")
+		return nil
+	}
+
+	// Display header
+	fmt.Println("Google Sync Status:")
+
+	// Define expected services and their display order
+	expectedServices := []string{"calendar", "contacts", "gmail"}
+	stateMap := make(map[string]db.SyncState)
+	for _, state := range states {
+		stateMap[state.Service] = state
+	}
+
+	// Display each service
+	for _, service := range expectedServices {
+		state, exists := stateMap[service]
+		// Capitalize first letter manually to avoid deprecated strings.Title
+		displayService := strings.ToUpper(service[:1]) + service[1:]
+
+		if !exists {
+			// Service not yet synced
+			fmt.Printf("  %-10s Not synced yet\n", displayService+":")
+			continue
+		}
+
+		// Determine status icon
+		var icon string
+		switch state.Status {
+		case "error":
+			icon = "✗"
+		case "syncing":
+			icon = "!"
+		default:
+			icon = "✓"
+		}
+
+		// Format last sync time
+		var timeStr string
+		if state.LastSyncTime != nil {
+			timeStr = formatTimeSince(*state.LastSyncTime)
+		} else {
+			timeStr = "never"
+		}
+
+		// Build status message
+		var statusMsg string
+		switch state.Status {
+		case "error":
+			if state.ErrorMessage != nil {
+				statusMsg = fmt.Sprintf("Error: %s", *state.ErrorMessage)
+			} else {
+				statusMsg = "Error (no details)"
+			}
+		case "syncing":
+			statusMsg = "Currently syncing..."
+		default:
+			// Check if incremental sync is enabled
+			if state.LastSyncToken != nil && *state.LastSyncToken != "" {
+				statusMsg = fmt.Sprintf("Last synced %s (idle, incremental sync enabled)", timeStr)
+			} else {
+				statusMsg = fmt.Sprintf("Last synced %s (idle)", timeStr)
+			}
+		}
+
+		fmt.Printf("  %-10s %s %s\n", displayService+":", icon, statusMsg)
+	}
+
+	return nil
+}
+
+// formatTimeSince formats a time duration in a human-readable way
+func formatTimeSince(t time.Time) string {
+	duration := time.Since(t)
+
+	if duration < time.Minute {
+		return "just now"
+	} else if duration < time.Hour {
+		minutes := int(duration.Minutes())
+		if minutes == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", minutes)
+	} else if duration < 24*time.Hour {
+		hours := int(duration.Hours())
+		if hours == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", hours)
+	} else {
+		days := int(duration.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	}
 }
 
 // openBrowser attempts to open URL in default browser

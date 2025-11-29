@@ -131,3 +131,55 @@ func CreateSyncLog(db *sql.DB, id, sourceService, sourceID, entityType, entityID
 
 	return nil
 }
+
+// GetAllSyncStates retrieves the sync state for all services
+func GetAllSyncStates(db *sql.DB) ([]SyncState, error) {
+	rows, err := db.Query(`
+		SELECT service, last_sync_time, last_sync_token, status, error_message, created_at, updated_at
+		FROM sync_state
+		ORDER BY service
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query sync states: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var states []SyncState
+	for rows.Next() {
+		var state SyncState
+		var lastSyncTime sql.NullTime
+		var lastSyncToken sql.NullString
+		var errorMessage sql.NullString
+
+		err := rows.Scan(
+			&state.Service,
+			&lastSyncTime,
+			&lastSyncToken,
+			&state.Status,
+			&errorMessage,
+			&state.CreatedAt,
+			&state.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan sync state: %w", err)
+		}
+
+		if lastSyncTime.Valid {
+			state.LastSyncTime = &lastSyncTime.Time
+		}
+		if lastSyncToken.Valid {
+			state.LastSyncToken = &lastSyncToken.String
+		}
+		if errorMessage.Valid {
+			state.ErrorMessage = &errorMessage.String
+		}
+
+		states = append(states, state)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating sync states: %w", err)
+	}
+
+	return states, nil
+}
