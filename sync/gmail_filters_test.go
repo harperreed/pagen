@@ -21,19 +21,19 @@ func TestBuildHighSignalQuery(t *testing.T) {
 			name:      "basic query with specific date",
 			userEmail: "user@example.com",
 			since:     time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC),
-			want:      "(from:me) OR (to:me is:replied) OR is:starred after:2024/01/15 -in:spam -in:trash",
+			want:      "(from:me is:replied) OR (to:me is:replied) OR is:starred after:2024/01/15 -in:spam -in:trash",
 		},
 		{
 			name:      "query with different year",
 			userEmail: "test@test.com",
 			since:     time.Date(2023, 12, 31, 23, 59, 59, 0, time.UTC),
-			want:      "(from:me) OR (to:me is:replied) OR is:starred after:2023/12/31 -in:spam -in:trash",
+			want:      "(from:me is:replied) OR (to:me is:replied) OR is:starred after:2023/12/31 -in:spam -in:trash",
 		},
 		{
 			name:      "query with early month/day",
 			userEmail: "foo@bar.com",
 			since:     time.Date(2024, 3, 5, 10, 30, 0, 0, time.UTC),
-			want:      "(from:me) OR (to:me is:replied) OR is:starred after:2024/03/05 -in:spam -in:trash",
+			want:      "(from:me is:replied) OR (to:me is:replied) OR is:starred after:2024/03/05 -in:spam -in:trash",
 		},
 	}
 

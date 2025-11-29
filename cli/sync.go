@@ -237,7 +237,10 @@ func SyncStatusCommand(database *sql.DB, args []string) error {
 	for _, service := range expectedServices {
 		state, exists := stateMap[service]
 		// Capitalize first letter manually to avoid deprecated strings.Title
-		displayService := strings.ToUpper(service[:1]) + service[1:]
+		displayService := service
+		if len(service) > 0 {
+			displayService = strings.ToUpper(service[:1]) + service[1:]
+		}
 
 		if !exists {
 			// Service not yet synced

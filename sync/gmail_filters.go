@@ -16,12 +16,12 @@ func BuildHighSignalQuery(userEmail string, since time.Time) string {
 	afterDate := since.Format("2006/01/02")
 
 	// Query for:
-	// 1. Emails from me that got replies
-	// 2. Emails to me that I replied to
-	// 3. Starred emails
+	// 1. Emails from me that got replies (confirmed engagement)
+	// 2. Emails to me that I replied to (active conversation)
+	// 3. Starred emails (manually marked important)
 	// Exclude spam and trash
 	query := fmt.Sprintf(
-		"(from:me) OR (to:me is:replied) OR is:starred after:%s -in:spam -in:trash",
+		"(from:me is:replied) OR (to:me is:replied) OR is:starred after:%s -in:spam -in:trash",
 		afterDate,
 	)
 

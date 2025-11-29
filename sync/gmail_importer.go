@@ -62,8 +62,9 @@ func ImportGmail(database *sql.DB, client *gmail.Service, initial bool) error {
 		query = BuildHighSignalQuery(userEmail, since)
 		fmt.Printf("  → Initial sync (last %d days, high-signal only)...\n", defaultImportDays)
 	} else {
-		// TODO: Use historyId for incremental sync
-		// For now, just fetch last 7 days
+		// Incremental sync: fetch last 7 days
+		// NOTE: Gmail historyId-based sync not yet implemented
+		// Currently relies on sync_log deduplication to avoid re-importing same emails
 		since := time.Now().AddDate(0, 0, -7)
 		query = BuildHighSignalQuery(userEmail, since)
 		fmt.Printf("  → Incremental sync (last 7 days)...\n")
@@ -145,17 +146,28 @@ func ImportGmail(database *sql.DB, client *gmail.Service, initial bool) error {
 				continue
 			}
 
-			// Extract sender contact
-			senderName, senderEmail, senderDomain := ExtractEmailAddress(from)
-			if senderEmail == "" || senderEmail == userEmail {
-				// Skip if no sender or email to self
+			// Determine contact: if we sent it (from:me), use recipient; otherwise use sender
+			to := headers["To"]
+			var contactName, contactEmail, contactDomain string
+			_, senderEmail, _ := ExtractEmailAddress(from)
+
+			if senderEmail == userEmail {
+				// We sent this email, extract first recipient
+				contactName, contactEmail, contactDomain = ExtractEmailAddress(to)
+			} else {
+				// We received this email, use sender
+				contactName, contactEmail, contactDomain = ExtractEmailAddress(from)
+			}
+
+			if contactEmail == "" || contactEmail == userEmail {
+				// Skip if no contact email or email to self
 				continue
 			}
 
 			// Find or create contact
-			contactID, isNew, err := findOrCreateEmailContact(database, matcher, senderName, senderEmail, senderDomain)
+			contactID, isNew, err := findOrCreateEmailContact(database, matcher, contactName, contactEmail, contactDomain)
 			if err != nil {
-				fmt.Printf("  ✗ Failed to create contact for %s: %v\n", senderEmail, err)
+				fmt.Printf("  ✗ Failed to create contact for %s: %v\n", contactEmail, err)
 				continue
 			}
 
