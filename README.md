@@ -314,7 +314,9 @@ Pagen syncs **Contacts**, **Calendar**, and **Gmail** data from Google into your
 - **Subject Lines Only** - Stores email subjects for context, NOT email bodies (privacy-focused)
 - **Automatic Contact Creation** - Email senders become contacts with company associations
 - **Interaction Logging** - Each high-signal email becomes an interaction record
-- **Initial & Incremental** - Import last 30 days initially, then sync recent emails
+- **Efficient Incremental Sync** - Uses Gmail History API with historyId for fast updates
+- **Automatic Fallback** - Falls back to time-based sync if historyId expires (typically after ~30 days)
+- **Initial & Incremental** - Import last 30 days initially, then sync only changes
 
 **Shared Features:**
 - **XDG-Compliant Storage** - Credentials stored securely in `~/.local/share/pagen/`
@@ -457,7 +459,7 @@ Only multi-person meetings you accepted or tentatively accepted are imported.
 Sync high-signal emails from Gmail to track email interactions with contacts:
 
 ```bash
-# Incremental sync - fetch recent high-signal emails (last 7 days)
+# Incremental sync - uses Gmail History API for efficient updates
 pagen sync gmail
 
 # Initial sync - import last 30 days of high-signal emails
@@ -480,10 +482,23 @@ Syncing Gmail...
   ✓ Logged 64 email interactions
 ```
 
-Example output (incremental sync):
+Example output (incremental sync with historyId):
 
 ```
 Syncing Gmail...
+  → Incremental sync using historyId (from 12345678 to 12348901)...
+  → Fetching history changes since historyId 12345678...
+
+  ✓ No new emails to import (all up to date)
+```
+
+Example output (incremental sync with expired historyId):
+
+```
+Syncing Gmail...
+  → Incremental sync using historyId (from 12345678 to 12398765)...
+  → Fetching history changes since historyId 12345678...
+  ⚠ HistoryId expired, falling back to time-based sync...
   → Incremental sync (last 7 days)...
 
 ✓ Fetched 23 emails from Gmail
@@ -494,6 +509,17 @@ Syncing Gmail...
   ✓ Created 2 new contacts from email addresses
   ✓ Logged 18 email interactions
 ```
+
+**How Incremental Sync Works:**
+
+Gmail sync uses the Gmail History API for efficient incremental updates:
+
+1. **First sync (initial)** - Fetches last 30 days using time-based query, stores current historyId
+2. **Subsequent syncs** - Uses historyId to fetch only changes since last sync (much faster)
+3. **Automatic fallback** - If historyId expires (~30 days), falls back to time-based query
+4. **Always stores latest historyId** - Every sync updates the historyId for next run
+
+This approach is much more efficient than re-querying all recent emails, especially for active email accounts.
 
 **What Gets Imported (High-Signal Only):**
 
@@ -521,13 +547,14 @@ To avoid noise and focus on real relationships, the sync automatically excludes:
 
 **What Happens During Sync:**
 
-1. **Build Query** - Constructs Gmail search for high-signal emails only
-2. **Fetch Messages** - Downloads message metadata (headers, not bodies)
-3. **Apply Filters** - Excludes automated, group, and calendar emails
-4. **Extract Contacts** - Parses sender email addresses and names
-5. **Create Contacts** - Adds new contacts with company associations from email domains
-6. **Log Interactions** - Creates interaction records with email subjects
-7. **Track Sync** - Records processed messages to avoid duplicates
+1. **Check Sync Method** - Uses historyId if available, otherwise falls back to time-based query
+2. **Fetch Changes** - Downloads only new/changed messages using Gmail History API (or all recent messages for initial sync)
+3. **Get Message Details** - Fetches metadata (headers, not bodies) for each changed message
+4. **Apply Filters** - Excludes automated, group, and calendar emails
+5. **Extract Contacts** - Parses sender email addresses and names
+6. **Create Contacts** - Adds new contacts with company associations from email domains
+7. **Log Interactions** - Creates interaction records with email subjects
+8. **Store HistoryId** - Saves current historyId for next incremental sync
 
 #### Combined Sync
 
@@ -571,6 +598,46 @@ Syncing Gmail...
 
 All paths follow XDG Base Directory specifications.
 
+### Automated Sync (Daemon Mode)
+
+Run sync automatically in the background at regular intervals:
+
+```bash
+# Run in foreground with 1-hour interval (default)
+pagen sync daemon
+
+# Customize interval
+pagen sync daemon --interval 15m   # Every 15 minutes
+pagen sync daemon --interval 4h    # Every 4 hours
+pagen sync daemon --interval 24h   # Once per day
+
+# Sync specific services only
+pagen sync daemon --interval 30m --services contacts,calendar
+pagen sync daemon --interval 1h --services gmail
+```
+
+**Daemon Features:**
+- **Foreground Process** - Runs in the foreground with proper logging
+- **Signal Handling** - Graceful shutdown on SIGTERM/SIGINT (Ctrl+C)
+- **Immediate First Sync** - Syncs on startup, then at intervals
+- **Rate Limit Protection** - Minimum 5-minute interval enforced
+- **Detailed Logging** - Timestamps and duration tracking for each sync
+- **Service Selection** - Sync all services or pick specific ones
+
+#### Install as System Service
+
+For production use, run the daemon as a background service:
+
+**macOS (launchd):**
+- See [docs/launchd/README.md](docs/launchd/README.md) for installation instructions
+- Auto-starts on login and runs continuously in the background
+- Logs to `~/Library/Logs/pagen-sync.log`
+
+**Linux (systemd):**
+- See [docs/systemd/README.md](docs/systemd/README.md) for installation instructions
+- Can run as user service or system-wide
+- Logs via journalctl: `journalctl --user -u pagen-sync.service -f`
+
 ### Current Limitations
 
 This is the foundation layer for Google integration. Current limitations:
@@ -582,12 +649,10 @@ This is the foundation layer for Google integration. Current limitations:
 
 **Calendar:**
 - **Read-Only** - Calendar events are imported, not modified in Google
-- **Manual Sync** - No automatic background sync (run commands manually)
 - **Basic Filtering** - Simple event type filtering (no content analysis)
 
 **Gmail:**
 - **Import Only** - Emails are imported as interactions, not synced bidirectionally
-- **Manual Sync** - No automatic background sync (run commands manually)
 - **Time-Based Incremental** - Uses date ranges, not Gmail historyId (future improvement)
 - **Subject Lines Only** - Email bodies are never stored (intentional privacy feature)
 

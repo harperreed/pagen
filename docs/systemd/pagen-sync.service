@@ -1,0 +1,43 @@
+# Systemd service file for pagen sync daemon
+# Install location: /etc/systemd/system/pagen-sync.service (system-wide)
+# Or: ~/.config/systemd/user/pagen-sync.service (user-only)
+
+[Unit]
+Description=Pagen Google Sync Daemon
+Documentation=https://github.com/harperreed/pagen
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Replace with your username
+User=YOUR_USERNAME
+# Replace with the path to the pagen binary
+ExecStart=/usr/local/bin/pagen sync daemon --interval 1h --services all
+
+# Environment variables for Google OAuth credentials
+# Option 1: Set directly (less secure)
+# Environment="GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com"
+# Environment="GOOGLE_CLIENT_SECRET=your-client-secret"
+
+# Option 2: Load from environment file (more secure)
+EnvironmentFile=/home/YOUR_USERNAME/.config/pagen/sync-credentials.env
+
+# Restart policy
+Restart=on-failure
+RestartSec=60
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/YOUR_USERNAME/.local/share/pagen
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pagen-sync
+
+[Install]
+WantedBy=multi-user.target

@@ -354,9 +354,13 @@ func main() {
 			if err := cli.SyncResetCommand(database, syncArgs); err != nil {
 				log.Fatalf("Error: %v", err)
 			}
+		case "daemon":
+			if err := cli.SyncDaemonCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
 		default:
 			fmt.Printf("Unknown sync command: %s\n", syncCommand)
-			fmt.Println("Commands: init, contacts, calendar, gmail, status, reset, review")
+			fmt.Println("Commands: init, contacts, calendar, gmail, status, reset, daemon")
 			os.Exit(1)
 		}
 
@@ -489,6 +493,13 @@ SYNC COMMANDS:
     --initial                     Import last 30 days
                                  Default: incremental sync (last 7 days)
                                  NOTE: Only imports replied-to and starred emails
+
+  pagen sync daemon              Run sync in daemon mode (foreground)
+    --interval <duration>         Sync interval (default: 1h, minimum: 5m)
+                                 Examples: 15m, 1h, 4h, 24h
+    --services <list>             Services to sync (default: all)
+                                 Options: contacts, calendar, gmail, all
+                                 Multiple: contacts,calendar
 
   pagen sync status              Show sync status for all services
 

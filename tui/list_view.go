@@ -42,7 +42,7 @@ func (m Model) renderListView() string {
 }
 
 func (m Model) renderTabs() string {
-	tabs := []string{"Contacts", "Companies", "Deals", "Followups"}
+	tabs := []string{"Contacts", "Companies", "Deals", "Followups", "Sync"}
 	var rendered []string
 
 	for i, tab := range tabs {
@@ -66,6 +66,8 @@ func (m Model) renderTable() string {
 		return m.renderDealsTable()
 	case EntityFollowups:
 		return m.renderFollowupsTable()
+	case EntitySync:
+		return m.renderSyncView()
 	}
 	return ""
 }
@@ -199,6 +201,7 @@ func (m Model) renderListHelp() string {
 		"↑/↓: Navigate",
 		"Tab: Switch tabs",
 		"f: Followups",
+		"s: Sync",
 		"Enter: View details",
 		"/: Search",
 		"n: New",
@@ -208,6 +211,11 @@ func (m Model) renderListHelp() string {
 }
 
 func (m Model) handleListKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If we're in sync view, delegate to sync handler
+	if m.entityType == EntitySync {
+		return m.handleSyncKeys(msg)
+	}
+
 	switch msg.String() {
 	case "up", "k":
 		if m.selectedRow > 0 {
@@ -216,11 +224,15 @@ func (m Model) handleListKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		m.selectedRow++
 	case "tab":
-		m.entityType = (m.entityType + 1) % 4
+		m.entityType = (m.entityType + 1) % 5
 		m.selectedRow = 0
 	case "f":
 		// Jump to followups tab
 		m.entityType = EntityFollowups
+		m.selectedRow = 0
+	case "s":
+		// Jump to sync tab
+		m.entityType = EntitySync
 		m.selectedRow = 0
 	case "enter":
 		// Switch to detail view

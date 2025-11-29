@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Service identifier (must match filename) -->
+    <key>Label</key>
+    <string>com.pagen.sync</string>
+
+    <!-- Path to pagen binary -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/pagen</string>
+        <string>sync</string>
+        <string>daemon</string>
+        <string>--interval</string>
+        <string>1h</string>
+        <string>--services</string>
+        <string>all</string>
+    </array>
+
+    <!-- Environment variables for Google OAuth -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>GOOGLE_CLIENT_ID</key>
+        <string>your-client-id.apps.googleusercontent.com</string>
+        <key>GOOGLE_CLIENT_SECRET</key>
+        <string>your-client-secret</string>
+    </dict>
+
+    <!-- Working directory (where database and logs are stored) -->
+    <key>WorkingDirectory</key>
+    <string>/Users/YOUR_USERNAME</string>
+
+    <!-- Run on load (start automatically) -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Keep service running (restart if it crashes) -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Standard output log -->
+    <key>StandardOutPath</key>
+    <string>/Users/YOUR_USERNAME/Library/Logs/pagen-sync.log</string>
+
+    <!-- Standard error log -->
+    <key>StandardErrorPath</key>
+    <string>/Users/YOUR_USERNAME/Library/Logs/pagen-sync-error.log</string>
+
+    <!-- Nice value (lower = higher priority, range: -20 to 20) -->
+    <key>Nice</key>
+    <integer>10</integer>
+
+    <!-- Throttle interval (seconds to wait before restart if it exits) -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Process type (Background = no UI, lower priority) -->
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

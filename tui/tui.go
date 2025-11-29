@@ -29,6 +29,7 @@ const (
 	EntityCompanies
 	EntityDeals
 	EntityFollowups
+	EntitySync
 )
 
 // Model is the main bubbletea model
@@ -55,20 +56,37 @@ type Model struct {
 	deleteConfirmed bool
 	deleteMessage   string
 
+	// Sync view state
+	syncStates      []SyncStateDisplay //nolint:unused // used in sync view
+	syncInProgress  map[string]bool    //nolint:unused // used in sync view
+	syncMessages    []string           //nolint:unused // used in sync view
+	selectedService int                //nolint:unused // used in sync view
+
 	// UI state
 	width  int
 	height int
 	err    error //nolint:unused // will be used in error handling
 }
 
+// SyncStateDisplay represents sync state for display in TUI
+type SyncStateDisplay struct {
+	Service      string
+	Status       string
+	LastSyncTime string
+	ErrorMessage string
+	InProgress   bool
+}
+
 // NewModel creates a new TUI model
 func NewModel(db *sql.DB) Model {
 	return Model{
-		db:         db,
-		viewMode:   ViewList,
-		entityType: EntityContacts,
-		width:      80,
-		height:     24,
+		db:             db,
+		viewMode:       ViewList,
+		entityType:     EntityContacts,
+		width:          80,
+		height:         24,
+		syncInProgress: make(map[string]bool),
+		syncMessages:   []string{},
 	}
 }
 
@@ -83,6 +101,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		return m, nil
+	case SyncCompleteMsg:
+		return m, m.handleSyncComplete(msg)
+	case SyncStartMsg:
+		m.syncInProgress[msg.Service] = true
 		return m, nil
 	}
 	return m, nil

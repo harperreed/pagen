@@ -7,10 +7,14 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"os/exec"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/harperreed/pagen/db"
@@ -402,4 +406,156 @@ func openBrowser(url string) error {
 
 	command := exec.Command(cmd, args...)
 	return command.Start()
+}
+
+// SyncDaemonCommand runs sync in daemon mode with configurable interval
+func SyncDaemonCommand(database *sql.DB, args []string) error {
+	fs := flag.NewFlagSet("daemon", flag.ExitOnError)
+	interval := fs.String("interval", "1h", "Sync interval (e.g., 15m, 1h, 4h)")
+	servicesStr := fs.String("services", "all", "Comma-separated services to sync (contacts,calendar,gmail,all)")
+	_ = fs.Parse(args)
+
+	// Parse interval duration
+	duration, err := time.ParseDuration(*interval)
+	if err != nil {
+		return fmt.Errorf("invalid interval format: %w", err)
+	}
+
+	// Validate minimum interval (5 minutes to prevent API hammering)
+	if duration < 5*time.Minute {
+		return fmt.Errorf("interval must be at least 5 minutes to respect API rate limits")
+	}
+
+	// Parse services list
+	services := parseServices(*servicesStr)
+	if len(services) == 0 {
+		return fmt.Errorf("no valid services specified")
+	}
+
+	log.Printf("Starting pagen sync daemon")
+	log.Printf("  Interval: %s", duration)
+	log.Printf("  Services: %s", strings.Join(services, ", "))
+	log.Printf("  Database: %+v", database.Stats())
+
+	// Setup signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Create ticker for scheduled syncs
+	ticker := time.NewTicker(duration)
+	defer ticker.Stop()
+
+	// Run initial sync immediately
+	log.Println("Running initial sync...")
+	if err := runDaemonSync(database, services); err != nil {
+		log.Printf("Initial sync failed: %v", err)
+	}
+
+	// Main daemon loop
+	for {
+		select {
+		case <-ticker.C:
+			log.Printf("Starting scheduled sync (interval: %s)", duration)
+			if err := runDaemonSync(database, services); err != nil {
+				log.Printf("Scheduled sync failed: %v", err)
+			}
+
+		case sig := <-sigChan:
+			log.Printf("Received signal %s, shutting down gracefully...", sig)
+			return nil
+		}
+	}
+}
+
+// parseServices converts comma-separated service string to slice
+func parseServices(servicesStr string) []string {
+	if servicesStr == "all" {
+		return []string{"contacts", "calendar", "gmail"}
+	}
+
+	parts := strings.Split(servicesStr, ",")
+	var services []string
+	validServices := map[string]bool{
+		"contacts": true,
+		"calendar": true,
+		"gmail":    true,
+	}
+
+	for _, part := range parts {
+		service := strings.TrimSpace(part)
+		if validServices[service] {
+			services = append(services, service)
+		} else {
+			log.Printf("Warning: ignoring invalid service '%s'", service)
+		}
+	}
+
+	return services
+}
+
+// runDaemonSync executes sync for specified services
+func runDaemonSync(database *sql.DB, services []string) error {
+	startTime := time.Now()
+
+	// Load OAuth token once
+	token, err := sync.LoadToken()
+	if err != nil {
+		return fmt.Errorf("no authentication token found. Run 'pagen sync init' first: %w", err)
+	}
+
+	// Track errors
+	errorCount := 0
+	successCount := 0
+
+	// Sync each service
+	for _, service := range services {
+		serviceStart := time.Now()
+		var err error
+
+		switch service {
+		case "contacts":
+			client, createErr := sync.NewPeopleClient(token)
+			if createErr != nil {
+				err = fmt.Errorf("failed to create People API client: %w", createErr)
+			} else {
+				err = sync.ImportContacts(database, client)
+			}
+
+		case "calendar":
+			client, createErr := sync.NewCalendarClient(token)
+			if createErr != nil {
+				err = fmt.Errorf("failed to create Calendar client: %w", createErr)
+			} else {
+				err = sync.ImportCalendar(database, client, false) // incremental
+			}
+
+		case "gmail":
+			client, createErr := sync.NewGmailClient(token)
+			if createErr != nil {
+				err = fmt.Errorf("failed to create Gmail client: %w", createErr)
+			} else {
+				err = sync.ImportGmail(database, client, false) // incremental
+			}
+		}
+
+		duration := time.Since(serviceStart)
+
+		if err != nil {
+			log.Printf("✗ %s sync failed (%.2fs): %v", service, duration.Seconds(), err)
+			errorCount++
+		} else {
+			log.Printf("✓ %s sync completed (%.2fs)", service, duration.Seconds())
+			successCount++
+		}
+	}
+
+	totalDuration := time.Since(startTime)
+	log.Printf("Sync cycle completed in %.2fs (%d succeeded, %d failed)",
+		totalDuration.Seconds(), successCount, errorCount)
+
+	if errorCount > 0 {
+		return fmt.Errorf("%d service(s) failed to sync", errorCount)
+	}
+
+	return nil
 }
