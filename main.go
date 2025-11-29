@@ -318,10 +318,12 @@ func main() {
 
 		log.Printf("CRM database: %s", finalDBPath)
 
+		// If no subcommand, sync all services
 		if len(commandArgs) == 0 {
-			fmt.Println("Usage: pagen sync <command>")
-			fmt.Println("Commands: init, contacts, calendar, gmail, status, review")
-			os.Exit(1)
+			if err := cli.SyncAllCommand(database); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+			return
 		}
 
 		syncCommand := commandArgs[0]
@@ -389,6 +391,7 @@ COMMANDS:
   crm                    CRM management commands
   viz                    Visualization commands
   web                    Start web UI server
+  sync                   Google sync commands (contacts, calendar, gmail)
 
 MCP SERVER:
   pagen mcp              Start MCP server (for Claude Desktop integration)
@@ -468,6 +471,30 @@ WEB UI:
   pagen web                      Start web UI server at http://localhost:8080
     --port <port>                 Port to listen on (default: 8080)
 
+SYNC COMMANDS:
+  pagen sync                     Sync all Google services (contacts, calendar, gmail)
+
+  pagen sync init                Setup Google OAuth authentication
+                                 Opens browser for Google login
+                                 Saves credentials for future syncs
+
+  pagen sync contacts            Sync Google Contacts
+                                 Imports all contacts with emails and phone numbers
+
+  pagen sync calendar            Sync Google Calendar events
+    --initial                     Full import (last 6 months)
+                                 Default: incremental sync
+
+  pagen sync gmail               Sync Gmail (high-signal emails only)
+    --initial                     Import last 30 days
+                                 Default: incremental sync (last 7 days)
+                                 NOTE: Only imports replied-to and starred emails
+
+  pagen sync status              Show sync status for all services
+
+  pagen sync reset <service>     Reset stuck sync state
+                                 Services: contacts, calendar, gmail, all
+
 EXAMPLES:
   # Start MCP server for Claude Desktop
   pagen mcp
@@ -483,6 +510,17 @@ EXAMPLES:
 
   # List deals in negotiation stage
   pagen crm list-deals --stage negotiation
+
+  # Setup Google authentication
+  pagen sync init
+
+  # Sync all Google services at once
+  pagen sync
+
+  # Sync specific services
+  pagen sync contacts
+  pagen sync calendar --initial
+  pagen sync gmail
 
 `, version)
 }

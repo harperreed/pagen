@@ -18,6 +18,69 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// SyncAllCommand syncs all Google services (contacts, calendar, gmail)
+func SyncAllCommand(database *sql.DB) error {
+	fmt.Println("=== Syncing All Google Services ===")
+
+	// Load OAuth token once
+	token, err := sync.LoadToken()
+	if err != nil {
+		return fmt.Errorf("no authentication token found. Run 'pagen sync init' first: %w", err)
+	}
+
+	// Track overall progress
+	totalErrors := 0
+	services := []struct {
+		name string
+		sync func() error
+	}{
+		{"Contacts", func() error {
+			client, err := sync.NewPeopleClient(token)
+			if err != nil {
+				return fmt.Errorf("failed to create People API client: %w", err)
+			}
+			return sync.ImportContacts(database, client)
+		}},
+		{"Calendar", func() error {
+			client, err := sync.NewCalendarClient(token)
+			if err != nil {
+				return fmt.Errorf("failed to create Calendar client: %w", err)
+			}
+			return sync.ImportCalendar(database, client, false) // incremental
+		}},
+		{"Gmail", func() error {
+			client, err := sync.NewGmailClient(token)
+			if err != nil {
+				return fmt.Errorf("failed to create Gmail client: %w", err)
+			}
+			return sync.ImportGmail(database, client, false) // incremental
+		}},
+	}
+
+	// Sync each service
+	for i, service := range services {
+		fmt.Printf("[%d/%d] %s\n", i+1, len(services), service.name)
+		fmt.Println(strings.Repeat("-", 50))
+
+		if err := service.sync(); err != nil {
+			fmt.Printf("✗ %s sync failed: %v\n\n", service.name, err)
+			totalErrors++
+		} else {
+			fmt.Printf("✓ %s sync completed\n\n", service.name)
+		}
+	}
+
+	// Summary
+	fmt.Println(strings.Repeat("=", 50))
+	if totalErrors == 0 {
+		fmt.Println("✓ All services synced successfully!")
+	} else {
+		fmt.Printf("⚠ Completed with %d error(s)\n", totalErrors)
+	}
+
+	return nil
+}
+
 // SyncInitCommand handles OAuth setup
 func SyncInitCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
