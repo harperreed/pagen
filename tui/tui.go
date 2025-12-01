@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// ViewMode represents the current TUI view
+// ViewMode represents the current TUI view.
 type ViewMode int
 
 const (
@@ -21,7 +21,7 @@ const (
 	ViewConfirmDelete
 )
 
-// EntityType represents the type of entity being viewed
+// EntityType represents the type of entity being viewed.
 type EntityType int
 
 const (
@@ -32,7 +32,7 @@ const (
 	EntitySync
 )
 
-// Model is the main bubbletea model
+// Model is the main bubbletea model.
 type Model struct {
 	db         *sql.DB
 	viewMode   ViewMode
@@ -68,7 +68,7 @@ type Model struct {
 	err    error //nolint:unused // will be used in error handling
 }
 
-// SyncStateDisplay represents sync state for display in TUI
+// SyncStateDisplay represents sync state for display in TUI.
 type SyncStateDisplay struct {
 	Service      string
 	Status       string
@@ -77,7 +77,7 @@ type SyncStateDisplay struct {
 	InProgress   bool
 }
 
-// NewModel creates a new TUI model
+// NewModel creates a new TUI model.
 func NewModel(db *sql.DB) Model {
 	return Model{
 		db:             db,
@@ -150,7 +150,7 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// Styles
+// Styles.
 var (
 	titleStyle = lipgloss.NewStyle(). //nolint:unused // will be used in Task 4.2-4.5
 			Bold(true).

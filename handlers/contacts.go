@@ -288,7 +288,7 @@ func contactToOutput(contact *models.Contact) ContactOutput {
 	return output
 }
 
-// Legacy map-based functions for tests
+// Legacy map-based functions for tests.
 func (h *ContactHandlers) AddContact_Legacy(args map[string]interface{}) (interface{}, error) {
 	name, ok := args["name"].(string)
 	if !ok || name == "" {

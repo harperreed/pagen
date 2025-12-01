@@ -11,7 +11,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-// NewCalendarClient creates a Google Calendar API service from an OAuth token
+// NewCalendarClient creates a Google Calendar API service from an OAuth token.
 func NewCalendarClient(token *oauth2.Token) (*calendar.Service, error) {
 	if token == nil {
 		return nil, fmt.Errorf("token cannot be nil")

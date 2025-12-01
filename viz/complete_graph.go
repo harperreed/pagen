@@ -12,7 +12,7 @@ import (
 	"github.com/harperreed/pagen/db"
 )
 
-// GenerateCompleteGraph creates a comprehensive graph with all contacts, companies, and deals
+// GenerateCompleteGraph creates a comprehensive graph with all contacts, companies, and deals.
 func (g *GraphGenerator) GenerateCompleteGraph() (string, error) {
 	ctx := context.Background()
 	gv, err := graphviz.New(ctx)

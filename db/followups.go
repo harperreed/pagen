@@ -4,6 +4,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/harperreed/pagen/models"
 )
 
-// CreateContactCadence creates or updates a contact's follow-up cadence
+// CreateContactCadence creates or updates a contact's follow-up cadence.
 func CreateContactCadence(db *sql.DB, cadence *models.ContactCadence) error {
 	query := `
 		INSERT INTO contact_cadence (
@@ -37,7 +38,7 @@ func CreateContactCadence(db *sql.DB, cadence *models.ContactCadence) error {
 	return err
 }
 
-// GetContactCadence retrieves cadence info for a contact
+// GetContactCadence retrieves cadence info for a contact.
 func GetContactCadence(db *sql.DB, contactID uuid.UUID) (*models.ContactCadence, error) {
 	query := `
 		SELECT contact_id, cadence_days, relationship_strength,
@@ -57,7 +58,7 @@ func GetContactCadence(db *sql.DB, contactID uuid.UUID) (*models.ContactCadence,
 		&cadence.NextFollowupDate,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -72,7 +73,7 @@ func GetContactCadence(db *sql.DB, contactID uuid.UUID) (*models.ContactCadence,
 	return cadence, nil
 }
 
-// GetFollowupList returns contacts needing follow-up, sorted by priority
+// GetFollowupList returns contacts needing follow-up, sorted by priority.
 func GetFollowupList(db *sql.DB, limit int) ([]models.FollowupContact, error) {
 	query := `
 		SELECT
@@ -131,7 +132,7 @@ func GetFollowupList(db *sql.DB, limit int) ([]models.FollowupContact, error) {
 	return followups, rows.Err()
 }
 
-// UpdateCadenceAfterInteraction updates cadence when interaction is logged
+// UpdateCadenceAfterInteraction updates cadence when interaction is logged.
 func UpdateCadenceAfterInteraction(db *sql.DB, contactID uuid.UUID, timestamp time.Time) error {
 	// Get or create cadence
 	cadence, err := GetContactCadence(db, contactID)
@@ -156,7 +157,7 @@ func UpdateCadenceAfterInteraction(db *sql.DB, contactID uuid.UUID, timestamp ti
 	return CreateContactCadence(db, cadence)
 }
 
-// SetContactCadence sets or updates a contact's cadence settings
+// SetContactCadence sets or updates a contact's cadence settings.
 func SetContactCadence(db *sql.DB, contactID uuid.UUID, days int, strength string) error {
 	cadence, err := GetContactCadence(db, contactID)
 	if err != nil {
@@ -177,7 +178,7 @@ func SetContactCadence(db *sql.DB, contactID uuid.UUID, days int, strength strin
 	return CreateContactCadence(db, cadence)
 }
 
-// LogInteraction records a new interaction and updates contact cadence
+// LogInteraction records a new interaction and updates contact cadence.
 func LogInteraction(db *sql.DB, interaction *models.InteractionLog) error {
 	// Generate ID if not set
 	if interaction.ID == uuid.Nil {
@@ -215,7 +216,7 @@ func LogInteraction(db *sql.DB, interaction *models.InteractionLog) error {
 	return UpdateCadenceAfterInteraction(db, interaction.ContactID, interaction.Timestamp)
 }
 
-// GetInteractionHistory retrieves interaction history for a contact
+// GetInteractionHistory retrieves interaction history for a contact.
 func GetInteractionHistory(db *sql.DB, contactID uuid.UUID, limit int) ([]models.InteractionLog, error) {
 	query := `
 		SELECT id, contact_id, interaction_type, timestamp, notes, sentiment, metadata
@@ -249,7 +250,7 @@ func GetInteractionHistory(db *sql.DB, contactID uuid.UUID, limit int) ([]models
 	return interactions, rows.Err()
 }
 
-// GetRecentInteractions gets all recent interactions across all contacts
+// GetRecentInteractions gets all recent interactions across all contacts.
 func GetRecentInteractions(db *sql.DB, days int, limit int) ([]models.InteractionLog, error) {
 	query := `
 		SELECT id, contact_id, interaction_type, timestamp, notes, sentiment, metadata

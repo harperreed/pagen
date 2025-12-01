@@ -17,12 +17,12 @@ import (
 const (
 	// Google OAuth client credentials
 	// Users must create their own OAuth app in Google Cloud Console
-	// These are placeholders - real values come from environment or config
+	// These are placeholders - real values come from environment or config.
 	defaultClientID     = "" // Set via GOOGLE_CLIENT_ID env var
 	defaultClientSecret = "" // Set via GOOGLE_CLIENT_SECRET env var
 )
 
-// NewOAuthConfig creates OAuth2 config for Google APIs
+// NewOAuthConfig creates OAuth2 config for Google APIs.
 func NewOAuthConfig() *oauth2.Config {
 	clientID := os.Getenv("GOOGLE_CLIENT_ID")
 	if clientID == "" {
@@ -47,12 +47,12 @@ func NewOAuthConfig() *oauth2.Config {
 	}
 }
 
-// TokenPath returns XDG-compliant path for storing OAuth tokens
+// TokenPath returns XDG-compliant path for storing OAuth tokens.
 func TokenPath() string {
 	return filepath.Join(xdg.DataHome, "pagen", "google-credentials.json")
 }
 
-// SaveToken saves OAuth token to XDG data directory
+// SaveToken saves OAuth token to XDG data directory.
 func SaveToken(token *oauth2.Token) error {
 	path := TokenPath()
 
@@ -76,7 +76,7 @@ func SaveToken(token *oauth2.Token) error {
 	return nil
 }
 
-// LoadToken loads OAuth token from XDG data directory
+// LoadToken loads OAuth token from XDG data directory.
 func LoadToken() (*oauth2.Token, error) {
 	path := TokenPath()
 
@@ -94,7 +94,7 @@ func LoadToken() (*oauth2.Token, error) {
 	return &token, nil
 }
 
-// GetClient returns an authenticated HTTP client
+// GetClient returns an authenticated HTTP client.
 func GetClient(ctx context.Context) (*oauth2.Config, error) {
 	config := NewOAuthConfig()
 

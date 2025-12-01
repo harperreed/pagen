@@ -11,7 +11,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-// NewGmailClient creates a new Google Gmail API client
+// NewGmailClient creates a new Google Gmail API client.
 func NewGmailClient(token *oauth2.Token) (*gmail.Service, error) {
 	if token == nil {
 		return nil, fmt.Errorf("token cannot be nil")

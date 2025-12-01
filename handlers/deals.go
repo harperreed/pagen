@@ -326,7 +326,7 @@ func isValidStage(stage string) bool {
 	return false
 }
 
-// Legacy map-based functions for tests
+// Legacy map-based functions for tests.
 func (h *DealHandlers) CreateDeal_Legacy(args map[string]interface{}) (interface{}, error) {
 	title, ok := args["title"].(string)
 	if !ok || title == "" {

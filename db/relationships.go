@@ -10,7 +10,7 @@ import (
 	"github.com/harperreed/pagen/models"
 )
 
-// orderContactIDs ensures contact_id_1 < contact_id_2 for consistent bidirectional storage
+// orderContactIDs ensures contact_id_1 < contact_id_2 for consistent bidirectional storage.
 func orderContactIDs(id1, id2 uuid.UUID) (uuid.UUID, uuid.UUID) {
 	if id1.String() < id2.String() {
 		return id1, id2

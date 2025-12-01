@@ -70,14 +70,14 @@ const (
 	StageClosedLost    = "closed_lost"
 )
 
-// RelationshipStrength constants
+// RelationshipStrength constants.
 const (
 	StrengthWeak   = "weak"
 	StrengthMedium = "medium"
 	StrengthStrong = "strong"
 )
 
-// InteractionType constants
+// InteractionType constants.
 const (
 	InteractionMeeting = "meeting"
 	InteractionCall    = "call"
@@ -86,7 +86,7 @@ const (
 	InteractionEvent   = "event"
 )
 
-// Sentiment constants
+// Sentiment constants.
 const (
 	SentimentPositive = "positive"
 	SentimentNeutral  = "neutral"
@@ -103,7 +103,7 @@ type ContactCadence struct {
 }
 
 // ComputePriorityScore calculates the priority score for a contact
-// Based on days overdue and relationship strength
+// Based on days overdue and relationship strength.
 func (c *ContactCadence) ComputePriorityScore() float64 {
 	if c.LastInteractionDate == nil {
 		return 0.0
@@ -132,7 +132,7 @@ func (c *ContactCadence) ComputePriorityScore() float64 {
 	return baseScore * multiplier
 }
 
-// UpdateNextFollowup sets the next followup date based on last interaction and cadence
+// UpdateNextFollowup sets the next followup date based on last interaction and cadence.
 func (c *ContactCadence) UpdateNextFollowup() {
 	if c.LastInteractionDate != nil {
 		next := c.LastInteractionDate.AddDate(0, 0, c.CadenceDays)
@@ -150,7 +150,7 @@ type InteractionLog struct {
 	Metadata        string    `json:"metadata,omitempty"`
 }
 
-// FollowupContact combines Contact with cadence info for follow-up views
+// FollowupContact combines Contact with cadence info for follow-up views.
 type FollowupContact struct {
 	Contact
 	CadenceDays          int        `json:"cadence_days"`
@@ -160,21 +160,21 @@ type FollowupContact struct {
 	NextFollowupDate     *time.Time `json:"next_followup_date,omitempty"`
 }
 
-// Sync status constants
+// Sync status constants.
 const (
 	SyncStatusIdle    = "idle"
 	SyncStatusSyncing = "syncing"
 	SyncStatusError   = "error"
 )
 
-// Suggestion type constants
+// Suggestion type constants.
 const (
 	SuggestionTypeDeal         = "deal"
 	SuggestionTypeRelationship = "relationship"
 	SuggestionTypeCompany      = "company"
 )
 
-// Suggestion status constants
+// Suggestion status constants.
 const (
 	SuggestionStatusPending  = "pending"
 	SuggestionStatusAccepted = "accepted"

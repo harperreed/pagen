@@ -15,7 +15,7 @@ import (
 	"github.com/harperreed/pagen/models"
 )
 
-// FollowupListCommand lists contacts needing follow-up
+// FollowupListCommand lists contacts needing follow-up.
 func FollowupListCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("list", flag.ExitOnError)
 	overdueOnly := fs.Bool("overdue-only", false, "Show only overdue contacts")
@@ -62,7 +62,7 @@ func FollowupListCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// FollowupStatsCommand shows follow-up statistics
+// FollowupStatsCommand shows follow-up statistics.
 func FollowupStatsCommand(database *sql.DB, args []string) error {
 	query := `
 		SELECT
@@ -108,7 +108,7 @@ func FollowupStatsCommand(database *sql.DB, args []string) error {
 	return rows.Err()
 }
 
-// LogInteractionCommand logs an interaction with a contact
+// LogInteractionCommand logs an interaction with a contact.
 func LogInteractionCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("log", flag.ExitOnError)
 	contactIDStr := fs.String("contact", "", "Contact ID or name (required)")
@@ -160,7 +160,7 @@ func LogInteractionCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// SetCadenceCommand sets the follow-up cadence for a contact
+// SetCadenceCommand sets the follow-up cadence for a contact.
 func SetCadenceCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("set-cadence", flag.ExitOnError)
 	contactIDStr := fs.String("contact", "", "Contact ID or name (required)")
@@ -197,7 +197,7 @@ func SetCadenceCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// DigestCommand generates a daily follow-up digest
+// DigestCommand generates a daily follow-up digest.
 func DigestCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("digest", flag.ExitOnError)
 	format := fs.String("format", "text", "Output format (text/json/html)")

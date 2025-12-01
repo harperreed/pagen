@@ -26,7 +26,7 @@ const (
 	skipReasonAutoSubject = "auto-generated subject"
 )
 
-// ImportGmail fetches and imports high-signal emails from Gmail
+// ImportGmail fetches and imports high-signal emails from Gmail.
 func ImportGmail(database *sql.DB, client *gmail.Service, initial bool) error {
 	// Update sync state to 'syncing'
 	fmt.Println("Syncing Gmail...")
@@ -148,7 +148,7 @@ func ImportGmail(database *sql.DB, client *gmail.Service, initial bool) error {
 	return nil
 }
 
-// syncWithHistoryId performs incremental sync using Gmail History API
+// syncWithHistoryId performs incremental sync using Gmail History API.
 func syncWithHistoryId(database *sql.DB, client *gmail.Service, userEmail string, startHistoryId uint64, matcher *ContactMatcher) (int, int, error) {
 	totalProcessed := 0
 	newContacts := 0
@@ -232,7 +232,7 @@ func syncWithHistoryId(database *sql.DB, client *gmail.Service, userEmail string
 	return totalProcessed, newContacts, nil
 }
 
-// syncWithQuery performs time-based sync using Gmail search query
+// syncWithQuery performs time-based sync using Gmail search query.
 func syncWithQuery(database *sql.DB, client *gmail.Service, userEmail, query string, matcher *ContactMatcher) (int, int, error) {
 	totalProcessed := 0
 	newContacts := 0
@@ -291,7 +291,7 @@ func syncWithQuery(database *sql.DB, client *gmail.Service, userEmail, query str
 	return totalProcessed, newContacts, nil
 }
 
-// processMessage fetches and processes a single message
+// processMessage fetches and processes a single message.
 func processMessage(database *sql.DB, client *gmail.Service, messageId, userEmail string, matcher *ContactMatcher) (bool, bool, error) {
 	// Get full message details
 	message, err := client.Users.Messages.Get("me", messageId).
@@ -378,7 +378,7 @@ func processMessage(database *sql.DB, client *gmail.Service, messageId, userEmai
 	return true, isNew, nil
 }
 
-// isHistoryExpiredError checks if the error is due to expired historyId
+// isHistoryExpiredError checks if the error is due to expired historyId.
 func isHistoryExpiredError(err error) bool {
 	if err == nil {
 		return false
@@ -388,7 +388,7 @@ func isHistoryExpiredError(err error) bool {
 	return strings.Contains(errStr, "404") || strings.Contains(errStr, "historyId")
 }
 
-// findOrCreateEmailContact finds existing contact by email or creates new one
+// findOrCreateEmailContact finds existing contact by email or creates new one.
 func findOrCreateEmailContact(database *sql.DB, matcher *ContactMatcher, name, email, domain string) (uuid.UUID, bool, error) {
 	// Try to find existing contact
 	existing, found := matcher.FindMatch(email, name)
@@ -429,7 +429,7 @@ func findOrCreateEmailContact(database *sql.DB, matcher *ContactMatcher, name, e
 	return contact.ID, true, nil
 }
 
-// findOrCreateCompanyFromDomain creates company from email domain
+// findOrCreateCompanyFromDomain creates company from email domain.
 func findOrCreateCompanyFromDomain(database *sql.DB, domain string) (*models.Company, error) {
 	// Capitalize domain as company name
 	companyName := capitalizeCompanyName(domain)
@@ -464,7 +464,7 @@ func findOrCreateCompanyFromDomain(database *sql.DB, domain string) (*models.Com
 	return newCompany, nil
 }
 
-// isCommonEmailDomain checks if domain is a common email provider (not company-specific)
+// isCommonEmailDomain checks if domain is a common email provider (not company-specific).
 func isCommonEmailDomain(domain string) bool {
 	commonDomains := []string{
 		"gmail.com",
@@ -492,7 +492,7 @@ func isCommonEmailDomain(domain string) bool {
 	return false
 }
 
-// capitalizeCompanyName converts domain to company name
+// capitalizeCompanyName converts domain to company name.
 func capitalizeCompanyName(domain string) string {
 	// Remove common TLDs
 	name := strings.TrimSuffix(domain, ".com")
@@ -514,7 +514,7 @@ func capitalizeCompanyName(domain string) string {
 	return strings.Join(parts, " ")
 }
 
-// parseEmailDate parses RFC 2822 email date
+// parseEmailDate parses RFC 2822 email date.
 func parseEmailDate(dateStr string) (time.Time, error) {
 	if dateStr == "" {
 		return time.Now(), nil
@@ -546,7 +546,7 @@ func parseEmailDate(dateStr string) (time.Time, error) {
 	return time.Now(), fmt.Errorf("failed to parse date: %s", dateStr)
 }
 
-// jsonEscape escapes a string for safe JSON embedding
+// jsonEscape escapes a string for safe JSON embedding.
 func jsonEscape(s string) string {
 	b, err := json.Marshal(s)
 	if err != nil {

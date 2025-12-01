@@ -14,7 +14,7 @@ import (
 	"github.com/harperreed/pagen/models"
 )
 
-// AddCompanyCommand adds a new company
+// AddCompanyCommand adds a new company.
 func AddCompanyCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("add-company", flag.ExitOnError)
 	name := fs.String("name", "", "Company name (required)")
@@ -49,7 +49,7 @@ func AddCompanyCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// ListCompaniesCommand lists all companies
+// ListCompaniesCommand lists all companies.
 func ListCompaniesCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("list-companies", flag.ExitOnError)
 	query := fs.String("query", "", "Search by name or domain")
@@ -90,7 +90,7 @@ func ListCompaniesCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// UpdateCompanyCommand updates an existing company
+// UpdateCompanyCommand updates an existing company.
 func UpdateCompanyCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("update-company", flag.ExitOnError)
 	name := fs.String("name", "", "Company name")
@@ -141,7 +141,7 @@ func UpdateCompanyCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// DeleteCompanyCommand deletes a company
+// DeleteCompanyCommand deletes a company.
 func DeleteCompanyCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("delete-company", flag.ExitOnError)
 	_ = fs.Parse(args)

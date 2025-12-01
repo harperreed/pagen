@@ -23,7 +23,7 @@ func NewResourceHandlers(database *sql.DB) *ResourceHandlers {
 	return &ResourceHandlers{db: database}
 }
 
-// ReadResource handles resource read requests
+// ReadResource handles resource read requests.
 func (h *ResourceHandlers) ReadResource(ctx context.Context, request *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 	uri := request.Params.URI
 	// Parse the URI

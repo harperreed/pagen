@@ -11,7 +11,7 @@ import (
 	"google.golang.org/api/people/v1"
 )
 
-// NewPeopleClient creates a new Google People API client
+// NewPeopleClient creates a new Google People API client.
 func NewPeopleClient(token *oauth2.Token) (*people.Service, error) {
 	if token == nil {
 		return nil, fmt.Errorf("token cannot be nil")

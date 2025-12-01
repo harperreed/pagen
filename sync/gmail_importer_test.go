@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// TestIsHistoryExpiredError tests expired historyId error detection
+// TestIsHistoryExpiredError tests expired historyId error detection.
 func TestIsHistoryExpiredError(t *testing.T) {
 	tests := []struct {
 		name string
@@ -55,7 +55,7 @@ func TestIsHistoryExpiredError(t *testing.T) {
 	}
 }
 
-// mockError implements error interface for testing
+// mockError implements error interface for testing.
 type mockError struct {
 	msg string
 }
@@ -64,7 +64,7 @@ func (e *mockError) Error() string {
 	return e.msg
 }
 
-// TestHistoryIdParsing tests parsing of historyId from sync token
+// TestHistoryIdParsing tests parsing of historyId from sync token.
 func TestHistoryIdParsing(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -133,7 +133,7 @@ func TestHistoryIdParsing(t *testing.T) {
 	}
 }
 
-// scanHistoryId is a helper for testing historyId parsing
+// scanHistoryId is a helper for testing historyId parsing.
 func scanHistoryId(token string, value *uint64) (int, error) {
 	// This mimics the parsing logic in the main code
 	var parsed uint64
@@ -144,7 +144,7 @@ func scanHistoryId(token string, value *uint64) (int, error) {
 	return n, err
 }
 
-// sscanf is a mock of fmt.Sscanf for testing
+// sscanf is a mock of fmt.Sscanf for testing.
 func sscanf(str, format string, value *uint64) (int, error) {
 	// Simple mock that handles %d format
 	if format != "%d" {

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// TestSyncCalendarCommand_NoToken verifies error when no token exists
+// TestSyncCalendarCommand_NoToken verifies error when no token exists.
 func TestSyncCalendarCommand_NoToken(t *testing.T) {
 	// Create temp database
 	tempDir := t.TempDir()
@@ -40,7 +40,7 @@ func TestSyncCalendarCommand_NoToken(t *testing.T) {
 	}
 }
 
-// TestSyncCalendarCommand_ParsesInitialFlag verifies --initial flag parsing
+// TestSyncCalendarCommand_ParsesInitialFlag verifies --initial flag parsing.
 func TestSyncCalendarCommand_ParsesInitialFlag(t *testing.T) {
 	// Create temp database
 	tempDir := t.TempDir()
@@ -84,7 +84,7 @@ func TestSyncCalendarCommand_ParsesInitialFlag(t *testing.T) {
 }
 
 // TestSyncCalendarCommand_Integration is a full integration test
-// This is skipped by default since it requires real OAuth credentials
+// This is skipped by default since it requires real OAuth credentials.
 func TestSyncCalendarCommand_Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -124,7 +124,7 @@ func TestSyncCalendarCommand_Integration(t *testing.T) {
 	}
 }
 
-// contains is a helper to check if a string contains a substring
+// contains is a helper to check if a string contains a substring.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && hasSubstring(s, substr))
 }

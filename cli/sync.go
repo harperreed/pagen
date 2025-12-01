@@ -22,7 +22,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// SyncAllCommand syncs all Google services (contacts, calendar, gmail)
+// SyncAllCommand syncs all Google services (contacts, calendar, gmail).
 func SyncAllCommand(database *sql.DB) error {
 	fmt.Println("=== Syncing All Google Services ===")
 
@@ -85,7 +85,7 @@ func SyncAllCommand(database *sql.DB) error {
 	return nil
 }
 
-// SyncInitCommand handles OAuth setup
+// SyncInitCommand handles OAuth setup.
 func SyncInitCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
 	_ = fs.Parse(args)
@@ -155,7 +155,7 @@ func SyncInitCommand(database *sql.DB, args []string) error {
 	}
 }
 
-// SyncContactsCommand syncs Google Contacts
+// SyncContactsCommand syncs Google Contacts.
 func SyncContactsCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("contacts", flag.ExitOnError)
 	_ = fs.Parse(args)
@@ -180,7 +180,7 @@ func SyncContactsCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// SyncCalendarCommand syncs Google Calendar events
+// SyncCalendarCommand syncs Google Calendar events.
 func SyncCalendarCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("calendar", flag.ExitOnError)
 	initial := fs.Bool("initial", false, "Full import (last 6 months)")
@@ -206,7 +206,7 @@ func SyncCalendarCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// SyncGmailCommand syncs Gmail emails
+// SyncGmailCommand syncs Gmail emails.
 func SyncGmailCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("gmail", flag.ExitOnError)
 	initial := fs.Bool("initial", false, "Import last 30 days")
@@ -232,7 +232,7 @@ func SyncGmailCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// SyncResetCommand resets a stuck sync state
+// SyncResetCommand resets a stuck sync state.
 func SyncResetCommand(database *sql.DB, args []string) error {
 	if len(args) == 0 {
 		fmt.Println("Usage: pagen sync reset <service>")
@@ -272,7 +272,7 @@ func SyncResetCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// SyncStatusCommand displays the sync status for all Google services
+// SyncStatusCommand displays the sync status for all Google services.
 func SyncStatusCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("status", flag.ExitOnError)
 	_ = fs.Parse(args)
@@ -360,7 +360,7 @@ func SyncStatusCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// formatTimeSince formats a time duration in a human-readable way
+// formatTimeSince formats a time duration in a human-readable way.
 func formatTimeSince(t time.Time) string {
 	duration := time.Since(t)
 
@@ -387,7 +387,7 @@ func formatTimeSince(t time.Time) string {
 	}
 }
 
-// openBrowser attempts to open URL in default browser
+// openBrowser attempts to open URL in default browser.
 func openBrowser(url string) error {
 	var cmd string
 	var args []string
@@ -408,7 +408,7 @@ func openBrowser(url string) error {
 	return command.Start()
 }
 
-// SyncDaemonCommand runs sync in daemon mode with configurable interval
+// SyncDaemonCommand runs sync in daemon mode with configurable interval.
 func SyncDaemonCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("daemon", flag.ExitOnError)
 	interval := fs.String("interval", "1h", "Sync interval (e.g., 15m, 1h, 4h)")
@@ -467,7 +467,7 @@ func SyncDaemonCommand(database *sql.DB, args []string) error {
 	}
 }
 
-// parseServices converts comma-separated service string to slice
+// parseServices converts comma-separated service string to slice.
 func parseServices(servicesStr string) []string {
 	if servicesStr == "all" {
 		return []string{"contacts", "calendar", "gmail"}
@@ -493,7 +493,7 @@ func parseServices(servicesStr string) []string {
 	return services
 }
 
-// runDaemonSync executes sync for specified services
+// runDaemonSync executes sync for specified services.
 func runDaemonSync(database *sql.DB, services []string) error {
 	startTime := time.Now()
 

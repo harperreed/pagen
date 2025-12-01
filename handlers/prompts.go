@@ -22,7 +22,7 @@ func NewPromptHandlers(database *sql.DB) *PromptHandlers {
 	return &PromptHandlers{db: database}
 }
 
-// GetPrompt generates the prompt message based on the template
+// GetPrompt generates the prompt message based on the template.
 func (h *PromptHandlers) GetPrompt(ctx context.Context, request *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 	name := request.Params.Name
 	arguments := request.Params.Arguments

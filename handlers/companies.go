@@ -98,7 +98,7 @@ func companyToOutput(company *models.Company) CompanyOutput {
 	}
 }
 
-// Legacy map-based functions for tests
+// Legacy map-based functions for tests.
 func (h *CompanyHandlers) AddCompany_Legacy(args map[string]interface{}) (interface{}, error) {
 	name, ok := args["name"].(string)
 	if !ok || name == "" {

@@ -215,7 +215,7 @@ func relationshipToOutput(relationship *models.Relationship) RelationshipOutput 
 	}
 }
 
-// Legacy map-based functions for tests
+// Legacy map-based functions for tests.
 func (h *RelationshipHandlers) LinkContacts_Legacy(args map[string]interface{}) (interface{}, error) {
 	contactID1Str, ok := args["contact_id_1"].(string)
 	if !ok || contactID1Str == "" {

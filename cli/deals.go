@@ -14,7 +14,7 @@ import (
 	"github.com/harperreed/pagen/models"
 )
 
-// AddDealCommand adds a new deal
+// AddDealCommand adds a new deal.
 func AddDealCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("add-deal", flag.ExitOnError)
 	title := fs.String("title", "", "Deal title (required)")
@@ -82,7 +82,7 @@ func AddDealCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// ListDealsCommand lists all deals
+// ListDealsCommand lists all deals.
 func ListDealsCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("list-deals", flag.ExitOnError)
 	stage := fs.String("stage", "", "Filter by stage")
@@ -140,7 +140,7 @@ func ListDealsCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// DeleteDealCommand deletes a deal
+// DeleteDealCommand deletes a deal.
 func DeleteDealCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("delete-deal", flag.ExitOnError)
 	_ = fs.Parse(args)

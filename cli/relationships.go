@@ -11,7 +11,7 @@ import (
 	"github.com/harperreed/pagen/db"
 )
 
-// UpdateRelationshipCommand updates a relationship
+// UpdateRelationshipCommand updates a relationship.
 func UpdateRelationshipCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("update-relationship", flag.ExitOnError)
 	relType := fs.String("type", "", "Relationship type")
@@ -36,7 +36,7 @@ func UpdateRelationshipCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// DeleteRelationshipCommand deletes a relationship
+// DeleteRelationshipCommand deletes a relationship.
 func DeleteRelationshipCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("delete-relationship", flag.ExitOnError)
 	_ = fs.Parse(args)

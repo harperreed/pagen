@@ -5,6 +5,7 @@ package sync
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -20,12 +21,12 @@ const (
 	calendarService = "calendar"
 	maxResults      = 250 // Google Calendar API max per page
 
-	// Skip reasons for event filtering
+	// Skip reasons for event filtering.
 	skipReasonAlreadyImported = "already imported"
 )
 
 // shouldSkipEvent determines if an event should be skipped during import
-// Returns (true, reason) if the event should be skipped, (false, "") otherwise
+// Returns (true, reason) if the event should be skipped, (false, "") otherwise.
 func shouldSkipEvent(event *calendar.Event, userEmail string) (bool, string) {
 	// Check for nil event
 	if event == nil {
@@ -65,7 +66,7 @@ func shouldSkipEvent(event *calendar.Event, userEmail string) (bool, string) {
 	return false, ""
 }
 
-// pluralize returns "s" if count != 1, otherwise ""
+// pluralize returns "s" if count != 1, otherwise "".
 func pluralize(count int) string {
 	if count == 1 {
 		return ""
@@ -73,7 +74,7 @@ func pluralize(count int) string {
 	return "s"
 }
 
-// ImportCalendar fetches and imports calendar events from Google Calendar
+// ImportCalendar fetches and imports calendar events from Google Calendar.
 func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) error {
 	// Update sync state to 'syncing'
 	fmt.Println("Syncing Google Calendar...")
@@ -147,7 +148,8 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 		events, err := call.Do()
 		if err != nil {
 			// Handle 410 Gone error (invalid sync token)
-			if apiErr, ok := err.(*googleapi.Error); ok && apiErr.Code == 410 {
+			apiErr := &googleapi.Error{}
+			if errors.As(err, &apiErr) {
 				fmt.Println("  → Sync token invalid, falling back to time-based sync...")
 
 				// Fall back to time-based sync using last sync time or 6 months ago
@@ -294,7 +296,7 @@ func ImportCalendar(database *sql.DB, client *calendar.Service, initial bool) er
 }
 
 // extractContacts extracts attendees from a calendar event and creates/matches contacts
-// Returns a list of contact IDs for all attendees (excluding the user)
+// Returns a list of contact IDs for all attendees (excluding the user).
 func extractContacts(database *sql.DB, event *calendar.Event, userEmail string, matcher *ContactMatcher) ([]uuid.UUID, error) {
 	var contactIDs []uuid.UUID
 
@@ -339,7 +341,7 @@ func extractContacts(database *sql.DB, event *calendar.Event, userEmail string, 
 }
 
 // calculateDuration calculates the duration in minutes between start and end times
-// Returns an error if times are invalid or end time is before start time
+// Returns an error if times are invalid or end time is before start time.
 func calculateDuration(event *calendar.Event) (int, error) {
 	if event.Start == nil {
 		return 0, fmt.Errorf("event start time is nil")
@@ -368,7 +370,7 @@ func calculateDuration(event *calendar.Event) (int, error) {
 	return durationMinutes, nil
 }
 
-// logInteraction creates interaction_log entries for all attendees/contacts from a calendar event
+// logInteraction creates interaction_log entries for all attendees/contacts from a calendar event.
 func logInteraction(database *sql.DB, event *calendar.Event, contactIDs []uuid.UUID) error {
 	// Parse event start time
 	startTime, err := time.Parse(time.RFC3339, event.Start.DateTime)

@@ -14,7 +14,7 @@ import (
 	"github.com/harperreed/pagen/models"
 )
 
-// AddContactCommand adds a new contact
+// AddContactCommand adds a new contact.
 func AddContactCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("add-contact", flag.ExitOnError)
 	name := fs.String("name", "", "Contact name (required)")
@@ -72,7 +72,7 @@ func AddContactCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// ListContactsCommand lists all contacts
+// ListContactsCommand lists all contacts.
 func ListContactsCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("list-contacts", flag.ExitOnError)
 	query := fs.String("query", "", "Search by name or email")
@@ -133,7 +133,7 @@ func ListContactsCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// UpdateContactCommand updates an existing contact
+// UpdateContactCommand updates an existing contact.
 func UpdateContactCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("update-contact", flag.ExitOnError)
 	name := fs.String("name", "", "Contact name")
@@ -196,7 +196,7 @@ func UpdateContactCommand(database *sql.DB, args []string) error {
 	return nil
 }
 
-// DeleteContactCommand deletes a contact
+// DeleteContactCommand deletes a contact.
 func DeleteContactCommand(database *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("delete-contact", flag.ExitOnError)
 	_ = fs.Parse(args)

@@ -11,7 +11,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// MCPCommand starts the MCP server on stdio
+// MCPCommand starts the MCP server on stdio.
 func MCPCommand(db *sql.DB) error {
 	log.Println("Starting CRM MCP Server...")
 

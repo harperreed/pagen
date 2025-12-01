@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// SyncState represents the sync state for a service
+// SyncState represents the sync state for a service.
 type SyncState struct {
 	Service       string
 	LastSyncTime  *time.Time
@@ -19,7 +19,7 @@ type SyncState struct {
 	UpdatedAt     time.Time
 }
 
-// GetSyncState retrieves the sync state for a service
+// GetSyncState retrieves the sync state for a service.
 func GetSyncState(db *sql.DB, service string) (*SyncState, error) {
 	var state SyncState
 	var lastSyncTime sql.NullTime
@@ -60,7 +60,7 @@ func GetSyncState(db *sql.DB, service string) (*SyncState, error) {
 	return &state, nil
 }
 
-// UpdateSyncStatus updates the sync status for a service
+// UpdateSyncStatus updates the sync status for a service.
 func UpdateSyncStatus(db *sql.DB, service, status string, errorMsg *string) error {
 	var errorMsgVal sql.NullString
 	if errorMsg != nil {
@@ -83,7 +83,7 @@ func UpdateSyncStatus(db *sql.DB, service, status string, errorMsg *string) erro
 	return nil
 }
 
-// UpdateSyncToken updates the sync token and last sync time for a service
+// UpdateSyncToken updates the sync token and last sync time for a service.
 func UpdateSyncToken(db *sql.DB, service, token string) error {
 	_, err := db.Exec(`
 		INSERT INTO sync_state (service, last_sync_time, last_sync_token, status, created_at, updated_at)
@@ -103,7 +103,7 @@ func UpdateSyncToken(db *sql.DB, service, token string) error {
 	return nil
 }
 
-// CheckSyncLogExists checks if an entity has already been imported
+// CheckSyncLogExists checks if an entity has already been imported.
 func CheckSyncLogExists(db *sql.DB, sourceService, sourceID string) (bool, error) {
 	var count int
 	err := db.QueryRow(`
@@ -118,7 +118,7 @@ func CheckSyncLogExists(db *sql.DB, sourceService, sourceID string) (bool, error
 	return count > 0, nil
 }
 
-// CreateSyncLog creates a sync log entry for an imported entity
+// CreateSyncLog creates a sync log entry for an imported entity.
 func CreateSyncLog(db *sql.DB, id, sourceService, sourceID, entityType, entityID, metadata string) error {
 	_, err := db.Exec(`
 		INSERT INTO sync_log (id, source_service, source_id, entity_type, entity_id, imported_at, metadata)
@@ -132,7 +132,7 @@ func CreateSyncLog(db *sql.DB, id, sourceService, sourceID, entityType, entityID
 	return nil
 }
 
-// GetAllSyncStates retrieves the sync state for all services
+// GetAllSyncStates retrieves the sync state for all services.
 func GetAllSyncStates(db *sql.DB) ([]SyncState, error) {
 	rows, err := db.Query(`
 		SELECT service, last_sync_time, last_sync_token, status, error_message, created_at, updated_at

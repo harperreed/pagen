@@ -161,7 +161,7 @@ func InitSchema(db *sql.DB) error {
 }
 
 // migrateInteractionLogMetadata adds the metadata column if it doesn't exist
-// This ensures users upgrading from Phase 1 can continue using the database
+// This ensures users upgrading from Phase 1 can continue using the database.
 func migrateInteractionLogMetadata(db *sql.DB) error {
 	// Check if column exists
 	var count int

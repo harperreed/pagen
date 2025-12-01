@@ -48,14 +48,30 @@ func main() {
 	// Get remaining args after flags
 	args := flag.Args()
 
-	// If no command specified, launch TUI
+	// If no command specified, show welcome banner and launch TUI
 	if len(args) == 0 {
+		// Display ASCII art welcome banner
+		fmt.Print(`
+  ██████╗  █████╗  ██████╗ ███████╗███╗   ██╗
+  ██╔══██╗██╔══██╗██╔════╝ ██╔════╝████╗  ██║
+  ██████╔╝███████║██║  ███╗█████╗  ██╔██╗ ██║
+  ██╔═══╝ ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║
+  ██║     ██║  ██║╚██████╔╝███████╗██║ ╚████║
+  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝
+
+           🚀 Your Personal CRM Agent ⚡
+
+`)
+
 		finalDBPath := getDatabasePath(*dbPath)
 		database, err := db.OpenDatabase(finalDBPath)
 		if err != nil {
 			log.Fatalf("Failed to open database: %v", err)
 		}
 		defer func() { _ = database.Close() }()
+
+		fmt.Println("  🔐 Loading interactive interface...")
+		fmt.Println()
 
 		tuiModel := tui.NewModel(database)
 		p := tea.NewProgram(tuiModel, tea.WithAltScreen())

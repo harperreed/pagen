@@ -1,0 +1,158 @@
+# ABOUTME: golangci-lint configuration for comprehensive Go code quality checks
+# ABOUTME: Enables linters for bugs, performance, security, style, and maintainability
+
+version: 2
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
+
+linters:
+  enable:
+    # Bug detection
+    - errcheck          # Check for unchecked errors
+    - govet             # Go vet built-in linter
+    - ineffassign       # Detect ineffectual assignments
+    - staticcheck       # Advanced static analysis
+    - unused            # Unused constants, variables, functions
+    - bodyclose         # Check HTTP response body is closed
+    - nilerr            # Find code that returns nil even if it checks error
+    - nilnil            # Checks that there is no simultaneous return of nil error and nil value
+    - errchkjson        # Checks types passed to json encoding functions
+    - contextcheck      # Check context.Context is passed correctly
+
+    # Performance
+    - prealloc          # Find slice declarations that could be preallocated
+    - makezero          # Finds slice declarations with non-zero initial length
+
+    # Style
+    - misspell          # Finds commonly misspelled English words
+    - whitespace        # Tool for detection of leading and trailing whitespace
+    - godot             # Check if comments end in a period
+
+    # Code complexity
+    - gocyclo           # Computes cyclomatic complexity
+    - gocognit          # Computes cognitive complexity
+    - nestif            # Reports deeply nested if statements
+    - funlen            # Tool for detection of long functions
+
+    # Security
+    - gosec             # Security problems
+    - copyloopvar       # Detects places where loop variables are copied
+
+    # Error handling
+    - errorlint         # Find code that will cause problems with Go 1.13+ error wrapping
+
+    # Maintainability
+    - goconst           # Finds repeated strings that could be replaced by a constant
+    - gocritic          # Comprehensive static analyzer
+    - unconvert         # Remove unnecessary type conversions
+    - unparam           # Reports unused function parameters
+    - wastedassign      # Finds wasted assignment statements
+
+  disable:
+    - exhaustruct       # Too strict for most projects
+    - exhaustive        # Can be noisy
+    - varnamelen        # Variable name length checking can be overly pedantic
+    - tagliatelle       # Struct tag format checking
+    - wrapcheck         # Too strict about error wrapping
+    - paralleltest      # Not all tests need to be parallel
+    - thelper           # Test helper detection can be noisy
+    - testpackage       # Requiring separate test packages is too strict
+    - funlen            # Function length rules are too restrictive
+    - gocognit          # Cognitive complexity is too strict
+    - gocyclo           # Cyclomatic complexity is too strict
+    - nestif            # Nesting complexity is too strict
+    - goconst           # Constant extraction is overly pedantic
+    - nilnil            # Returning nil,nil is sometimes appropriate
+    - prealloc          # Preallocating slices is premature optimization
+    - unparam           # Unused params might be required by interfaces
+    - wastedassign      # Can be noisy
+    - contextcheck      # Context checking can be too strict
+    - gosec             # Security warnings need case-by-case review
+    - gocritic          # Style suggestions are often subjective
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    enable-all: true
+    disable:
+      - shadow  # Can be too noisy
+      - fieldalignment  # Optimizing struct field order is often premature
+
+  gocyclo:
+    min-complexity: 15
+
+  gocognit:
+    min-complexity: 20
+
+  funlen:
+    lines: 200
+    statements: 80
+    ignore-comments: true
+
+  misspell:
+    locale: US
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gosec:
+    excludes:
+      - G404  # Use of weak random number generator - often acceptable for non-crypto use
+
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+
+  nestif:
+    min-complexity: 5
+
+  staticcheck:
+    checks: ["all"]
+
+issues:
+  exclude-use-default: false
+  exclude-case-sensitive: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - funlen
+        - gosec
+        - goconst
+
+    # Exclude some linters from running on main.go (often has high complexity)
+    - path: cmd/.*main\.go
+      linters:
+        - gocyclo
+        - gocognit
+        - funlen
+
+    # Ignore long lines in go:generate comments
+    - linters:
+        - lll
+      source: "^//go:generate "
+
+severity:
+  default-severity: error
+  case-sensitive: false

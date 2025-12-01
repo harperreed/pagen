@@ -33,7 +33,7 @@ func NewContactsImporter(database *sql.DB) *ContactsImporter {
 	}
 }
 
-// ImportContact imports a single contact from Google
+// ImportContact imports a single contact from Google.
 func (ci *ContactsImporter) ImportContact(gc *GoogleContact) (bool, error) {
 	// Check for existing contact
 	existing, found := ci.matcher.FindMatch(gc.Email, gc.Name)
@@ -152,7 +152,7 @@ func (ci *ContactsImporter) findOrCreateCompany(name string) (*models.Company, e
 		// (another concurrent import may have created it)
 		company, findErr := db.FindCompanyByName(ci.db, name)
 		if findErr != nil {
-			return nil, fmt.Errorf("failed to create or find company: %w (original error: %v)", findErr, err)
+			return nil, fmt.Errorf("failed to create or find company: %w (original error: %w)", findErr, err)
 		}
 		if company != nil {
 			return company, nil
@@ -188,7 +188,7 @@ func (ci *ContactsImporter) logSync(sourceID string, entityID uuid.UUID) error {
 	return err
 }
 
-// ImportContacts fetches and imports contacts from Google People API
+// ImportContacts fetches and imports contacts from Google People API.
 func ImportContacts(database *sql.DB, client *people.Service) error {
 	const contactsService = "contacts"
 
@@ -315,7 +315,7 @@ func ImportContacts(database *sql.DB, client *people.Service) error {
 	return nil
 }
 
-// convertPerson converts a People API Person to GoogleContact
+// convertPerson converts a People API Person to GoogleContact.
 func convertPerson(person *people.Person) *GoogleContact {
 	gc := &GoogleContact{
 		ResourceName: person.ResourceName,

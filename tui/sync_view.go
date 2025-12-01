@@ -49,7 +49,7 @@ var (
 				Italic(true)
 )
 
-// SyncCompleteMsg is sent when a sync operation completes
+// SyncCompleteMsg is sent when a sync operation completes.
 type SyncCompleteMsg struct {
 	Service string
 	Error   error
@@ -231,7 +231,7 @@ func (m Model) handleSyncKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// syncService triggers a sync for a specific service
+// syncService triggers a sync for a specific service.
 func (m Model) syncService(service string) tea.Cmd {
 	return func() tea.Msg {
 		// Note: State updates (syncInProgress, syncMessages) happen in handleSyncKeys
@@ -278,7 +278,7 @@ func (m Model) syncService(service string) tea.Cmd {
 	}
 }
 
-// syncAllServices triggers a sync for all services
+// syncAllServices triggers a sync for all services.
 func (m *Model) syncAllServices() tea.Cmd {
 	return tea.Batch(
 		m.syncService("calendar"),
@@ -287,13 +287,13 @@ func (m *Model) syncAllServices() tea.Cmd {
 	)
 }
 
-// addSyncMessage adds a message to the sync message log
+// addSyncMessage adds a message to the sync message log.
 func (m *Model) addSyncMessage(msg string) {
 	timestamp := time.Now().Format("15:04:05")
 	m.syncMessages = append(m.syncMessages, fmt.Sprintf("[%s] %s", timestamp, msg))
 }
 
-// handleSyncComplete handles sync completion messages
+// handleSyncComplete handles sync completion messages.
 func (m *Model) handleSyncComplete(msg SyncCompleteMsg) tea.Cmd {
 	// Mark as no longer in progress
 	m.syncInProgress[msg.Service] = false
@@ -312,7 +312,7 @@ func (m *Model) handleSyncComplete(msg SyncCompleteMsg) tea.Cmd {
 	return nil
 }
 
-// formatTimeSince formats a time duration in a human-readable way
+// formatTimeSince formats a time duration in a human-readable way.
 func formatTimeSince(t time.Time) string {
 	duration := time.Since(t)
 

@@ -12,7 +12,7 @@ type ContactMatcher struct {
 	byEmail map[string]*models.Contact
 }
 
-// NewContactMatcher creates a matcher from existing contacts
+// NewContactMatcher creates a matcher from existing contacts.
 func NewContactMatcher(contacts []models.Contact) *ContactMatcher {
 	m := &ContactMatcher{
 		byEmail: make(map[string]*models.Contact),
@@ -28,7 +28,7 @@ func NewContactMatcher(contacts []models.Contact) *ContactMatcher {
 	return m
 }
 
-// FindMatch looks for existing contact by email
+// FindMatch looks for existing contact by email.
 func (m *ContactMatcher) FindMatch(email, name string) (*models.Contact, bool) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
@@ -48,12 +48,12 @@ func (m *ContactMatcher) AddContact(contact *models.Contact) {
 	}
 }
 
-// normalizeEmail converts email to lowercase for comparison
+// normalizeEmail converts email to lowercase for comparison.
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
-// extractDomain extracts domain from email address
+// extractDomain extracts domain from email address.
 func extractDomain(email string) string {
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {

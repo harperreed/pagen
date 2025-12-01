@@ -14,7 +14,7 @@ import (
 	"github.com/harperreed/pagen/db"
 )
 
-// TestDaemonSignalHandling verifies graceful shutdown on signals
+// TestDaemonSignalHandling verifies graceful shutdown on signals.
 func TestDaemonSignalHandling(t *testing.T) {
 	// Create in-memory test database
 	database, err := sql.Open("sqlite3", ":memory:")
@@ -68,7 +68,7 @@ func TestDaemonSignalHandling(t *testing.T) {
 	}
 }
 
-// TestDaemonTickerScheduling verifies sync runs at intervals
+// TestDaemonTickerScheduling verifies sync runs at intervals.
 func TestDaemonTickerScheduling(t *testing.T) {
 	// Use short interval for testing
 	interval := 100 * time.Millisecond
@@ -96,7 +96,7 @@ func TestDaemonTickerScheduling(t *testing.T) {
 	}
 }
 
-// TestDaemonMinimumInterval verifies interval validation
+// TestDaemonMinimumInterval verifies interval validation.
 func TestDaemonMinimumInterval(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -137,7 +137,7 @@ func TestDaemonMinimumInterval(t *testing.T) {
 	}
 }
 
-// TestDaemonServiceSelection verifies service filtering
+// TestDaemonServiceSelection verifies service filtering.
 func TestDaemonServiceSelection(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -179,7 +179,7 @@ func TestDaemonServiceSelection(t *testing.T) {
 	}
 }
 
-// TestDaemonImmediateFirstSync verifies initial sync runs immediately
+// TestDaemonImmediateFirstSync verifies initial sync runs immediately.
 func TestDaemonImmediateFirstSync(t *testing.T) {
 	startTime := time.Now()
 	interval := 1 * time.Hour // Long interval to ensure we're testing immediate sync
@@ -206,7 +206,7 @@ func TestDaemonImmediateFirstSync(t *testing.T) {
 	}
 }
 
-// TestDaemonGracefulShutdown verifies cleanup on shutdown
+// TestDaemonGracefulShutdown verifies cleanup on shutdown.
 func TestDaemonGracefulShutdown(t *testing.T) {
 	// Setup resources that need cleanup
 	ticker := time.NewTicker(100 * time.Millisecond)

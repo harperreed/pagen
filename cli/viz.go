@@ -12,7 +12,7 @@ import (
 	"github.com/harperreed/pagen/viz"
 )
 
-// VizGraphContactsCommand generates a contact relationship network graph
+// VizGraphContactsCommand generates a contact relationship network graph.
 func VizGraphContactsCommand(db *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("viz graph contacts", flag.ExitOnError)
 	output := fs.String("output", "", "Output file (default: stdout)")
@@ -45,7 +45,7 @@ func VizGraphContactsCommand(db *sql.DB, args []string) error {
 	return nil
 }
 
-// VizGraphCompanyCommand generates a company org chart
+// VizGraphCompanyCommand generates a company org chart.
 func VizGraphCompanyCommand(db *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("viz graph company", flag.ExitOnError)
 	output := fs.String("output", "", "Output file (default: stdout)")
@@ -77,7 +77,7 @@ func VizGraphCompanyCommand(db *sql.DB, args []string) error {
 	return nil
 }
 
-// VizGraphPipelineCommand generates a deal pipeline graph
+// VizGraphPipelineCommand generates a deal pipeline graph.
 func VizGraphPipelineCommand(db *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("viz graph pipeline", flag.ExitOnError)
 	output := fs.String("output", "", "Output file (default: stdout)")
@@ -100,7 +100,7 @@ func VizGraphPipelineCommand(db *sql.DB, args []string) error {
 	return nil
 }
 
-// VizGraphAllCommand generates a complete graph with all entities
+// VizGraphAllCommand generates a complete graph with all entities.
 func VizGraphAllCommand(db *sql.DB, args []string) error {
 	fs := flag.NewFlagSet("viz graph all", flag.ExitOnError)
 	output := fs.String("output", "", "Output file (default: stdout)")
