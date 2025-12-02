@@ -91,10 +91,12 @@ func (r *ObjectsRepository) Get(ctx context.Context, id string) (*Object, error)
 		return nil, err
 	}
 
-	if len(metadataJSON) > 0 {
+	if len(metadataJSON) > 0 && string(metadataJSON) != "null" {
 		if err := json.Unmarshal(metadataJSON, &obj.Metadata); err != nil {
 			return nil, err
 		}
+	} else {
+		obj.Metadata = make(map[string]interface{})
 	}
 
 	return &obj, nil
@@ -189,7 +191,7 @@ func (r *ObjectsRepository) List(ctx context.Context, objectType string) ([]*Obj
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	objects := make([]*Object, 0)
 
@@ -209,10 +211,12 @@ func (r *ObjectsRepository) List(ctx context.Context, objectType string) ([]*Obj
 			return nil, err
 		}
 
-		if len(metadataJSON) > 0 {
+		if len(metadataJSON) > 0 && string(metadataJSON) != "null" {
 			if err := json.Unmarshal(metadataJSON, &obj.Metadata); err != nil {
 				return nil, err
 			}
+		} else {
+			obj.Metadata = make(map[string]interface{})
 		}
 
 		objects = append(objects, &obj)

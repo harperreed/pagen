@@ -20,13 +20,13 @@ var (
 
 // Relationship represents a connection between two objects.
 type Relationship struct {
-	ID         string                 `json:"id"`
-	SourceID   string                 `json:"source_id"`
-	TargetID   string                 `json:"target_id"`
-	Type       string                 `json:"type"`
-	Metadata   map[string]interface{} `json:"metadata"`
-	CreatedAt  time.Time              `json:"created_at"`
-	UpdatedAt  time.Time              `json:"updated_at"`
+	ID        string                 `json:"id"`
+	SourceID  string                 `json:"source_id"`
+	TargetID  string                 `json:"target_id"`
+	Type      string                 `json:"type"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	CreatedAt time.Time              `json:"created_at"`
+	UpdatedAt time.Time              `json:"updated_at"`
 }
 
 // RelationshipsRepository provides CRUD operations for relationships.
@@ -108,10 +108,12 @@ func (r *RelationshipsRepository) Get(ctx context.Context, id string) (*Relation
 		return nil, err
 	}
 
-	if len(metadataJSON) > 0 {
+	if len(metadataJSON) > 0 && string(metadataJSON) != "null" {
 		if err := json.Unmarshal(metadataJSON, &rel.Metadata); err != nil {
 			return nil, err
 		}
+	} else {
+		rel.Metadata = make(map[string]interface{})
 	}
 
 	return &rel, nil
@@ -276,7 +278,7 @@ func (r *RelationshipsRepository) queryRelationships(ctx context.Context, query 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	relationships := make([]*Relationship, 0)
 
@@ -297,10 +299,12 @@ func (r *RelationshipsRepository) queryRelationships(ctx context.Context, query 
 			return nil, err
 		}
 
-		if len(metadataJSON) > 0 {
+		if len(metadataJSON) > 0 && string(metadataJSON) != "null" {
 			if err := json.Unmarshal(metadataJSON, &rel.Metadata); err != nil {
 				return nil, err
 			}
+		} else {
+			rel.Metadata = make(map[string]interface{})
 		}
 
 		relationships = append(relationships, &rel)

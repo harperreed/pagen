@@ -62,6 +62,12 @@ func NewActivityObject(actorID string, verb ActivityVerb, objectID string, objec
 
 // GetFields returns the activity-specific fields.
 func (a *ActivityObject) GetFields() (*ActivityFields, error) {
+	// Try direct type assertion first
+	if fields, ok := a.Fields.(ActivityFields); ok {
+		return &fields, nil
+	}
+
+	// Fall back to JSON round-trip for map[string]interface{} case
 	bytes, err := json.Marshal(a.Fields)
 	if err != nil {
 		return nil, err
