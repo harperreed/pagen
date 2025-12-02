@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/harperreed/pagen/db"
@@ -58,7 +57,7 @@ func migrate(dbPath string, dryRun, createBackup, force bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	// Check current schema
 	tables, err := getCurrentTables(database)
@@ -137,7 +136,7 @@ func getCurrentTables(db *sql.DB) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tables []string
 	for rows.Next() {
@@ -183,15 +182,4 @@ func dropLegacyTables(db *sql.DB) error {
 	}
 
 	return nil
-}
-
-func getBackupDir(dbPath string) (string, error) {
-	dir := filepath.Dir(dbPath)
-	backupDir := filepath.Join(dir, "backups")
-
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
-		return "", err
-	}
-
-	return backupDir, nil
 }

@@ -4,7 +4,6 @@
 package db
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -30,23 +29,26 @@ const (
 // CompanyToObject converts a models.Company to an Office OS Object.
 func CompanyToObject(company *models.Company) *Object {
 	return &Object{
-		ID:   company.ID.String(),
-		Type: ObjectTypeCompany,
-		Name: company.Name,
-		Metadata: map[string]interface{}{
+		ID:        company.ID.String(),
+		Kind:      ObjectTypeCompany,
+		CreatedAt: company.CreatedAt,
+		UpdatedAt: company.UpdatedAt,
+		CreatedBy: "system",
+		ACL:       `[{"actorId":"system","role":"owner"}]`,
+		Tags:      "[]",
+		Fields: map[string]interface{}{
+			"name":     company.Name,
 			"domain":   company.Domain,
 			"industry": company.Industry,
 			"notes":    company.Notes,
 		},
-		CreatedAt: company.CreatedAt,
-		UpdatedAt: company.UpdatedAt,
 	}
 }
 
 // ObjectToCompany converts an Office OS Object to a models.Company.
 func ObjectToCompany(obj *Object) (*models.Company, error) {
-	if obj.Type != ObjectTypeCompany {
-		return nil, fmt.Errorf("object is not a Company type: %s", obj.Type)
+	if obj.Kind != ObjectTypeCompany {
+		return nil, fmt.Errorf("object is not a Company type: %s", obj.Kind)
 	}
 
 	id, err := uuid.Parse(obj.ID)
@@ -56,19 +58,21 @@ func ObjectToCompany(obj *Object) (*models.Company, error) {
 
 	company := &models.Company{
 		ID:        id,
-		Name:      obj.Name,
 		CreatedAt: obj.CreatedAt,
 		UpdatedAt: obj.UpdatedAt,
 	}
 
-	// Extract metadata fields with type assertions
-	if domain, ok := obj.Metadata["domain"].(string); ok {
+	// Extract fields with type assertions
+	if name, ok := obj.Fields["name"].(string); ok {
+		company.Name = name
+	}
+	if domain, ok := obj.Fields["domain"].(string); ok {
 		company.Domain = domain
 	}
-	if industry, ok := obj.Metadata["industry"].(string); ok {
+	if industry, ok := obj.Fields["industry"].(string); ok {
 		company.Industry = industry
 	}
-	if notes, ok := obj.Metadata["notes"].(string); ok {
+	if notes, ok := obj.Fields["notes"].(string); ok {
 		company.Notes = notes
 	}
 
@@ -77,34 +81,37 @@ func ObjectToCompany(obj *Object) (*models.Company, error) {
 
 // ContactToObject converts a models.Contact to an Office OS Object.
 func ContactToObject(contact *models.Contact) *Object {
-	metadata := map[string]interface{}{
+	fields := map[string]interface{}{
+		"name":  contact.Name,
 		"email": contact.Email,
 		"phone": contact.Phone,
 		"notes": contact.Notes,
 	}
 
 	if contact.CompanyID != nil {
-		metadata["company_id"] = contact.CompanyID.String()
+		fields["company_id"] = contact.CompanyID.String()
 	}
 
 	if contact.LastContactedAt != nil {
-		metadata["last_contacted_at"] = contact.LastContactedAt.Format(time.RFC3339)
+		fields["last_contacted_at"] = contact.LastContactedAt.Format(time.RFC3339Nano)
 	}
 
 	return &Object{
 		ID:        contact.ID.String(),
-		Type:      ObjectTypeContact,
-		Name:      contact.Name,
-		Metadata:  metadata,
+		Kind:      ObjectTypeContact,
 		CreatedAt: contact.CreatedAt,
 		UpdatedAt: contact.UpdatedAt,
+		CreatedBy: "system",
+		ACL:       `[{"actorId":"system","role":"owner"}]`,
+		Tags:      "[]",
+		Fields:    fields,
 	}
 }
 
 // ObjectToContact converts an Office OS Object to a models.Contact.
 func ObjectToContact(obj *Object) (*models.Contact, error) {
-	if obj.Type != ObjectTypeContact {
-		return nil, fmt.Errorf("object is not a Contact type: %s", obj.Type)
+	if obj.Kind != ObjectTypeContact {
+		return nil, fmt.Errorf("object is not a Contact type: %s", obj.Kind)
 	}
 
 	id, err := uuid.Parse(obj.ID)
@@ -114,24 +121,26 @@ func ObjectToContact(obj *Object) (*models.Contact, error) {
 
 	contact := &models.Contact{
 		ID:        id,
-		Name:      obj.Name,
 		CreatedAt: obj.CreatedAt,
 		UpdatedAt: obj.UpdatedAt,
 	}
 
-	// Extract metadata fields with type assertions
-	if email, ok := obj.Metadata["email"].(string); ok {
+	// Extract fields with type assertions
+	if name, ok := obj.Fields["name"].(string); ok {
+		contact.Name = name
+	}
+	if email, ok := obj.Fields["email"].(string); ok {
 		contact.Email = email
 	}
-	if phone, ok := obj.Metadata["phone"].(string); ok {
+	if phone, ok := obj.Fields["phone"].(string); ok {
 		contact.Phone = phone
 	}
-	if notes, ok := obj.Metadata["notes"].(string); ok {
+	if notes, ok := obj.Fields["notes"].(string); ok {
 		contact.Notes = notes
 	}
 
 	// Parse company_id if present
-	if companyIDStr, ok := obj.Metadata["company_id"].(string); ok && companyIDStr != "" {
+	if companyIDStr, ok := obj.Fields["company_id"].(string); ok && companyIDStr != "" {
 		companyID, err := uuid.Parse(companyIDStr)
 		if err == nil {
 			contact.CompanyID = &companyID
@@ -139,8 +148,8 @@ func ObjectToContact(obj *Object) (*models.Contact, error) {
 	}
 
 	// Parse last_contacted_at if present
-	if lastContactedStr, ok := obj.Metadata["last_contacted_at"].(string); ok && lastContactedStr != "" {
-		lastContacted, err := time.Parse(time.RFC3339, lastContactedStr)
+	if lastContactedStr, ok := obj.Fields["last_contacted_at"].(string); ok && lastContactedStr != "" {
+		lastContacted, err := time.Parse(time.RFC3339Nano, lastContactedStr)
 		if err == nil {
 			contact.LastContactedAt = &lastContacted
 		}
@@ -151,39 +160,42 @@ func ObjectToContact(obj *Object) (*models.Contact, error) {
 
 // DealToObject converts a models.Deal to an Office OS Object.
 func DealToObject(deal *models.Deal) *Object {
-	metadata := map[string]interface{}{
+	fields := map[string]interface{}{
+		"title":    deal.Title,
 		"amount":   deal.Amount,
 		"currency": deal.Currency,
 		"stage":    deal.Stage,
 	}
 
 	// Company ID is required for deals
-	metadata["company_id"] = deal.CompanyID.String()
+	fields["company_id"] = deal.CompanyID.String()
 
 	if deal.ContactID != nil {
-		metadata["contact_id"] = deal.ContactID.String()
+		fields["contact_id"] = deal.ContactID.String()
 	}
 
 	if deal.ExpectedCloseDate != nil {
-		metadata["expected_close_date"] = deal.ExpectedCloseDate.Format(time.RFC3339)
+		fields["expected_close_date"] = deal.ExpectedCloseDate.Format(time.RFC3339Nano)
 	}
 
-	metadata["last_activity_at"] = deal.LastActivityAt.Format(time.RFC3339)
+	fields["last_activity_at"] = deal.LastActivityAt.Format(time.RFC3339Nano)
 
 	return &Object{
 		ID:        deal.ID.String(),
-		Type:      ObjectTypeDeal,
-		Name:      deal.Title,
-		Metadata:  metadata,
+		Kind:      ObjectTypeDeal,
 		CreatedAt: deal.CreatedAt,
 		UpdatedAt: deal.UpdatedAt,
+		CreatedBy: "system",
+		ACL:       `[{"actorId":"system","role":"owner"}]`,
+		Tags:      "[]",
+		Fields:    fields,
 	}
 }
 
 // ObjectToDeal converts an Office OS Object to a models.Deal.
 func ObjectToDeal(obj *Object) (*models.Deal, error) {
-	if obj.Type != ObjectTypeDeal {
-		return nil, fmt.Errorf("object is not a Deal type: %s", obj.Type)
+	if obj.Kind != ObjectTypeDeal {
+		return nil, fmt.Errorf("object is not a Deal type: %s", obj.Kind)
 	}
 
 	id, err := uuid.Parse(obj.ID)
@@ -193,14 +205,18 @@ func ObjectToDeal(obj *Object) (*models.Deal, error) {
 
 	deal := &models.Deal{
 		ID:        id,
-		Title:     obj.Name,
 		CreatedAt: obj.CreatedAt,
 		UpdatedAt: obj.UpdatedAt,
 		Currency:  "USD", // Default
 	}
 
+	// Extract title from fields
+	if title, ok := obj.Fields["title"].(string); ok {
+		deal.Title = title
+	}
+
 	// Extract required company_id
-	companyIDStr, ok := obj.Metadata["company_id"].(string)
+	companyIDStr, ok := obj.Fields["company_id"].(string)
 	if !ok || companyIDStr == "" {
 		return nil, fmt.Errorf("deal missing required company_id")
 	}
@@ -211,22 +227,22 @@ func ObjectToDeal(obj *Object) (*models.Deal, error) {
 	deal.CompanyID = companyID
 
 	// Extract numeric fields - handle both float64 (from JSON) and int64
-	if amount, ok := obj.Metadata["amount"].(float64); ok {
+	if amount, ok := obj.Fields["amount"].(float64); ok {
 		deal.Amount = int64(amount)
-	} else if amount, ok := obj.Metadata["amount"].(int64); ok {
+	} else if amount, ok := obj.Fields["amount"].(int64); ok {
 		deal.Amount = amount
 	}
 
 	// Extract string fields
-	if currency, ok := obj.Metadata["currency"].(string); ok {
+	if currency, ok := obj.Fields["currency"].(string); ok {
 		deal.Currency = currency
 	}
-	if stage, ok := obj.Metadata["stage"].(string); ok {
+	if stage, ok := obj.Fields["stage"].(string); ok {
 		deal.Stage = stage
 	}
 
 	// Parse optional contact_id
-	if contactIDStr, ok := obj.Metadata["contact_id"].(string); ok && contactIDStr != "" {
+	if contactIDStr, ok := obj.Fields["contact_id"].(string); ok && contactIDStr != "" {
 		contactID, err := uuid.Parse(contactIDStr)
 		if err == nil {
 			deal.ContactID = &contactID
@@ -234,16 +250,16 @@ func ObjectToDeal(obj *Object) (*models.Deal, error) {
 	}
 
 	// Parse optional expected_close_date
-	if closeDateStr, ok := obj.Metadata["expected_close_date"].(string); ok && closeDateStr != "" {
-		closeDate, err := time.Parse(time.RFC3339, closeDateStr)
+	if closeDateStr, ok := obj.Fields["expected_close_date"].(string); ok && closeDateStr != "" {
+		closeDate, err := time.Parse(time.RFC3339Nano, closeDateStr)
 		if err == nil {
 			deal.ExpectedCloseDate = &closeDate
 		}
 	}
 
 	// Parse last_activity_at (required for deals)
-	if activityStr, ok := obj.Metadata["last_activity_at"].(string); ok && activityStr != "" {
-		activity, err := time.Parse(time.RFC3339, activityStr)
+	if activityStr, ok := obj.Fields["last_activity_at"].(string); ok && activityStr != "" {
+		activity, err := time.Parse(time.RFC3339Nano, activityStr)
 		if err == nil {
 			deal.LastActivityAt = activity
 		}
@@ -261,66 +277,4 @@ func getStringFromMetadata(metadata map[string]interface{}, key string) string {
 		return val
 	}
 	return ""
-}
-
-// Helper function to safely get int64 from metadata (handles JSON number conversion).
-func getInt64FromMetadata(metadata map[string]interface{}, key string) int64 {
-	if val, ok := metadata[key].(float64); ok {
-		return int64(val)
-	}
-	if val, ok := metadata[key].(int64); ok {
-		return val
-	}
-	if val, ok := metadata[key].(int); ok {
-		return int64(val)
-	}
-	return 0
-}
-
-// Helper function to safely get time from metadata.
-func getTimeFromMetadata(metadata map[string]interface{}, key string) (*time.Time, error) {
-	if val, ok := metadata[key].(string); ok && val != "" {
-		t, err := time.Parse(time.RFC3339, val)
-		if err != nil {
-			return nil, err
-		}
-		return &t, nil
-	}
-	return nil, nil
-}
-
-// Helper function to safely get UUID from metadata.
-func getUUIDFromMetadata(metadata map[string]interface{}, key string) (*uuid.UUID, error) {
-	if val, ok := metadata[key].(string); ok && val != "" {
-		id, err := uuid.Parse(val)
-		if err != nil {
-			return nil, err
-		}
-		return &id, nil
-	}
-	return nil, nil
-}
-
-// Marshal metadata to JSON string for storage.
-func marshalMetadata(data interface{}) (string, error) {
-	if data == nil {
-		return "{}", nil
-	}
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal metadata: %w", err)
-	}
-	return string(bytes), nil
-}
-
-// Unmarshal metadata from JSON string.
-func unmarshalMetadata(jsonStr string) (map[string]interface{}, error) {
-	if jsonStr == "" {
-		return make(map[string]interface{}), nil
-	}
-	var metadata map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonStr), &metadata); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
-	}
-	return metadata, nil
 }

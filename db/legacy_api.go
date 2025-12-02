@@ -62,8 +62,8 @@ func FindCompanies(db *sql.DB, query string, limit int) ([]models.Company, error
 	for _, obj := range objects {
 		// Apply search filter if query is provided
 		if query != "" {
-			nameLower := strings.ToLower(obj.Name)
-			domainLower := strings.ToLower(getStringFromMetadata(obj.Metadata, "domain"))
+			nameLower := strings.ToLower(getStringFromMetadata(obj.Fields, "name"))
+			domainLower := strings.ToLower(getStringFromMetadata(obj.Fields, "domain"))
 
 			if !strings.Contains(nameLower, queryLower) && !strings.Contains(domainLower, queryLower) {
 				continue
@@ -94,7 +94,8 @@ func FindCompanyByName(db *sql.DB, name string) (*models.Company, error) {
 
 	nameLower := strings.ToLower(name)
 	for _, obj := range objects {
-		if strings.ToLower(obj.Name) == nameLower {
+		objName := getStringFromMetadata(obj.Fields, "name")
+		if strings.ToLower(objName) == nameLower {
 			return ObjectToCompany(obj)
 		}
 	}
@@ -112,10 +113,10 @@ func UpdateCompany(db *sql.DB, id uuid.UUID, updates *models.Company) error {
 	}
 
 	// Update fields from the updates parameter
-	existing.Name = updates.Name
-	existing.Metadata["domain"] = updates.Domain
-	existing.Metadata["industry"] = updates.Industry
-	existing.Metadata["notes"] = updates.Notes
+	existing.Fields["name"] = updates.Name
+	existing.Fields["domain"] = updates.Domain
+	existing.Fields["industry"] = updates.Industry
+	existing.Fields["notes"] = updates.Notes
 
 	return repo.Update(context.Background(), existing)
 }
@@ -133,7 +134,7 @@ func DeleteCompany(db *sql.DB, id uuid.UUID) error {
 
 	dealCount := 0
 	for _, deal := range deals {
-		companyIDStr := getStringFromMetadata(deal.Metadata, "company_id")
+		companyIDStr := getStringFromMetadata(deal.Fields, "company_id")
 		if companyIDStr == id.String() {
 			dealCount++
 		}
@@ -150,9 +151,9 @@ func DeleteCompany(db *sql.DB, id uuid.UUID) error {
 	}
 
 	for _, contact := range contacts {
-		companyIDStr := getStringFromMetadata(contact.Metadata, "company_id")
+		companyIDStr := getStringFromMetadata(contact.Fields, "company_id")
 		if companyIDStr == id.String() {
-			delete(contact.Metadata, "company_id")
+			delete(contact.Fields, "company_id")
 			if err := repo.Update(context.Background(), contact); err != nil {
 				return fmt.Errorf("failed to update contact: %w", err)
 			}
@@ -241,7 +242,7 @@ func FindContacts(db *sql.DB, query string, companyID *uuid.UUID, limit int) ([]
 	for _, obj := range objects {
 		// Apply company filter if provided
 		if companyID != nil {
-			objCompanyID := getStringFromMetadata(obj.Metadata, "company_id")
+			objCompanyID := getStringFromMetadata(obj.Fields, "company_id")
 			if objCompanyID != companyID.String() {
 				continue
 			}
@@ -249,8 +250,8 @@ func FindContacts(db *sql.DB, query string, companyID *uuid.UUID, limit int) ([]
 
 		// Apply search filter if query is provided
 		if query != "" {
-			nameLower := strings.ToLower(obj.Name)
-			emailLower := strings.ToLower(getStringFromMetadata(obj.Metadata, "email"))
+			nameLower := strings.ToLower(getStringFromMetadata(obj.Fields, "name"))
+			emailLower := strings.ToLower(getStringFromMetadata(obj.Fields, "email"))
 
 			if !strings.Contains(nameLower, queryLower) && !strings.Contains(emailLower, queryLower) {
 				continue
@@ -286,18 +287,18 @@ func UpdateContact(db *sql.DB, id uuid.UUID, updates *models.Contact) error {
 	}
 
 	// Get old company ID before update
-	oldCompanyIDStr := getStringFromMetadata(existing.Metadata, "company_id")
+	oldCompanyIDStr := getStringFromMetadata(existing.Fields, "company_id")
 
 	// Update fields
-	existing.Name = updates.Name
-	existing.Metadata["email"] = updates.Email
-	existing.Metadata["phone"] = updates.Phone
-	existing.Metadata["notes"] = updates.Notes
+	existing.Fields["name"] = updates.Name
+	existing.Fields["email"] = updates.Email
+	existing.Fields["phone"] = updates.Phone
+	existing.Fields["notes"] = updates.Notes
 
 	if updates.CompanyID != nil {
-		existing.Metadata["company_id"] = updates.CompanyID.String()
+		existing.Fields["company_id"] = updates.CompanyID.String()
 	} else {
-		delete(existing.Metadata, "company_id")
+		delete(existing.Fields, "company_id")
 	}
 
 	if err := repo.Update(context.Background(), existing); err != nil {
@@ -365,9 +366,9 @@ func DeleteContact(db *sql.DB, id uuid.UUID) error {
 	}
 
 	for _, deal := range deals {
-		contactIDStr := getStringFromMetadata(deal.Metadata, "contact_id")
+		contactIDStr := getStringFromMetadata(deal.Fields, "contact_id")
 		if contactIDStr == id.String() {
-			delete(deal.Metadata, "contact_id")
+			delete(deal.Fields, "contact_id")
 			if err := repo.Update(context.Background(), deal); err != nil {
 				return fmt.Errorf("failed to update deal: %w", err)
 			}
@@ -386,7 +387,7 @@ func UpdateContactLastContacted(db *sql.DB, contactID uuid.UUID, timestamp time.
 		return err
 	}
 
-	obj.Metadata["last_contacted_at"] = timestamp.Format(time.RFC3339)
+	obj.Fields["last_contacted_at"] = timestamp.Format(time.RFC3339)
 	return repo.Update(context.Background(), obj)
 }
 
@@ -425,6 +426,9 @@ func GetDeal(db *sql.DB, id uuid.UUID) (*models.Deal, error) {
 }
 
 func UpdateDeal(db *sql.DB, deal *models.Deal) error {
+	// Update last_activity_at timestamp
+	deal.LastActivityAt = time.Now().UTC()
+
 	repo := NewObjectsRepository(db)
 	obj := DealToObject(deal)
 	return repo.Update(context.Background(), obj)
@@ -446,7 +450,7 @@ func FindDeals(db *sql.DB, stage string, companyID *uuid.UUID, limit int) ([]mod
 	for _, obj := range objects {
 		// Apply company filter if provided
 		if companyID != nil {
-			objCompanyID := getStringFromMetadata(obj.Metadata, "company_id")
+			objCompanyID := getStringFromMetadata(obj.Fields, "company_id")
 			if objCompanyID != companyID.String() {
 				continue
 			}
@@ -454,7 +458,7 @@ func FindDeals(db *sql.DB, stage string, companyID *uuid.UUID, limit int) ([]mod
 
 		// Apply stage filter if provided
 		if stage != "" {
-			objStage := getStringFromMetadata(obj.Metadata, "stage")
+			objStage := getStringFromMetadata(obj.Fields, "stage")
 			if objStage != stage {
 				continue
 			}
@@ -496,10 +500,10 @@ func AddDealNote(db *sql.DB, note *models.DealNote) error {
 		return err
 	}
 
-	// Add note to deal metadata
-	// Notes are stored as an array in metadata
+	// Add note to deal fields
+	// Notes are stored as an array in fields
 	var notes []map[string]interface{}
-	if existingNotes, ok := deal.Metadata["notes"].([]interface{}); ok {
+	if existingNotes, ok := deal.Fields["notes"].([]interface{}); ok {
 		for _, n := range existingNotes {
 			if noteMap, ok := n.(map[string]interface{}); ok {
 				notes = append(notes, noteMap)
@@ -510,23 +514,23 @@ func AddDealNote(db *sql.DB, note *models.DealNote) error {
 	newNote := map[string]interface{}{
 		"id":         note.ID.String(),
 		"content":    note.Content,
-		"created_at": note.CreatedAt.Format(time.RFC3339),
+		"created_at": note.CreatedAt.Format(time.RFC3339Nano),
 	}
 	notes = append(notes, newNote)
-	deal.Metadata["notes"] = notes
+	deal.Fields["notes"] = notes
 
 	// Update last_activity_at
-	deal.Metadata["last_activity_at"] = note.CreatedAt.Format(time.RFC3339)
+	deal.Fields["last_activity_at"] = note.CreatedAt.Format(time.RFC3339Nano)
 
 	if err := repo.Update(context.Background(), deal); err != nil {
 		return err
 	}
 
 	// Update contact's last_contacted_at if deal has a contact
-	if contactIDStr := getStringFromMetadata(deal.Metadata, "contact_id"); contactIDStr != "" {
+	if contactIDStr := getStringFromMetadata(deal.Fields, "contact_id"); contactIDStr != "" {
 		contact, err := repo.Get(context.Background(), contactIDStr)
 		if err == nil {
-			contact.Metadata["last_contacted_at"] = note.CreatedAt.Format(time.RFC3339)
+			contact.Fields["last_contacted_at"] = note.CreatedAt.Format(time.RFC3339Nano)
 			_ = repo.Update(context.Background(), contact)
 		}
 	}
@@ -543,8 +547,8 @@ func GetDealNotes(db *sql.DB, dealID uuid.UUID) ([]models.DealNote, error) {
 
 	var notes []models.DealNote
 
-	// Extract notes from metadata
-	if existingNotes, ok := deal.Metadata["notes"].([]interface{}); ok {
+	// Extract notes from fields
+	if existingNotes, ok := deal.Fields["notes"].([]interface{}); ok {
 		for _, n := range existingNotes {
 			if noteMap, ok := n.(map[string]interface{}); ok {
 				note := models.DealNote{
@@ -563,7 +567,7 @@ func GetDealNotes(db *sql.DB, dealID uuid.UUID) ([]models.DealNote, error) {
 				}
 
 				if createdStr, ok := noteMap["created_at"].(string); ok {
-					created, err := time.Parse(time.RFC3339, createdStr)
+					created, err := time.Parse(time.RFC3339Nano, createdStr)
 					if err == nil {
 						note.CreatedAt = created
 					}
@@ -584,24 +588,6 @@ func GetDealNotes(db *sql.DB, dealID uuid.UUID) ([]models.DealNote, error) {
 
 // Legacy Relationship Functions (for the old contacts-to-contacts relationships)
 // Note: these are internal helpers - the public API is in relationships.go
-
-func createLegacyRelationship(db *sql.DB, relationship *models.Relationship) error {
-	relRepo := NewRelationshipsRepository(db)
-
-	rel := &Relationship{
-		SourceID: relationship.ContactID1.String(),
-		TargetID: relationship.ContactID2.String(),
-		Type:     RelTypeKnows,
-		Metadata: map[string]interface{}{
-			"relationship_type": relationship.RelationshipType,
-			"context":           relationship.Context,
-		},
-		CreatedAt: relationship.CreatedAt,
-		UpdatedAt: relationship.UpdatedAt,
-	}
-
-	return relRepo.Create(context.Background(), rel)
-}
 
 func GetRelationshipsBetween(db *sql.DB, contactID1, contactID2 uuid.UUID) ([]models.Relationship, error) {
 	relRepo := NewRelationshipsRepository(db)
@@ -709,9 +695,4 @@ func GetContactRelationships(db *sql.DB, contactID uuid.UUID) ([]models.Relation
 	}
 
 	return relationships, nil
-}
-
-func deleteLegacyRelationship(db *sql.DB, id uuid.UUID) error {
-	relRepo := NewRelationshipsRepository(db)
-	return relRepo.Delete(context.Background(), id.String())
 }

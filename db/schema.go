@@ -10,11 +10,13 @@ import (
 // Object represents the core entity in Office OS.
 type Object struct {
 	ID        string                 `json:"id"`
-	Type      string                 `json:"type"`
-	Name      string                 `json:"name"`
-	Metadata  map[string]interface{} `json:"metadata"`
+	Kind      string                 `json:"kind"`
 	CreatedAt time.Time              `json:"created_at"`
 	UpdatedAt time.Time              `json:"updated_at"`
+	CreatedBy string                 `json:"created_by"`
+	ACL       string                 `json:"acl"`  // JSON string
+	Tags      string                 `json:"tags"` // JSON string
+	Fields    map[string]interface{} `json:"fields"`
 }
 
 func InitSchema(db *sql.DB) error {
@@ -26,15 +28,18 @@ func InitSchema(db *sql.DB) error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS objects (
 		id TEXT PRIMARY KEY,
-		type TEXT NOT NULL,
-		name TEXT NOT NULL,
-		metadata TEXT NOT NULL DEFAULT '{}',
+		kind TEXT NOT NULL,
 		created_at DATETIME NOT NULL,
-		updated_at DATETIME NOT NULL
+		updated_at DATETIME NOT NULL,
+		created_by TEXT NOT NULL,
+		acl TEXT NOT NULL DEFAULT '[]',
+		tags TEXT NOT NULL DEFAULT '[]',
+		fields TEXT NOT NULL DEFAULT '{}'
 	);
 
-	CREATE INDEX IF NOT EXISTS idx_objects_type ON objects(type);
+	CREATE INDEX IF NOT EXISTS idx_objects_kind ON objects(kind);
 	CREATE INDEX IF NOT EXISTS idx_objects_created_at ON objects(created_at);
+	CREATE INDEX IF NOT EXISTS idx_objects_created_by ON objects(created_by);
 
 	CREATE TABLE IF NOT EXISTS relationships (
 		id TEXT PRIMARY KEY,

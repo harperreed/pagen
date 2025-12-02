@@ -14,7 +14,7 @@ import (
 // TestCRMScenario demonstrates a basic CRM setup with people, companies, and relationships.
 func TestCRMScenario(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	objRepo := NewObjectsRepository(db)
 	relRepo := NewRelationshipsRepository(db)
@@ -22,9 +22,9 @@ func TestCRMScenario(t *testing.T) {
 
 	// Create a company
 	acme := &Object{
-		Type: "Company",
-		Name: "Acme Corporation",
-		Metadata: map[string]interface{}{
+		Kind: "Company",
+		Fields: map[string]interface{}{
+			"name":     "Acme Corporation",
 			"domain":   "acme.com",
 			"industry": "Technology",
 			"size":     "500-1000",
@@ -34,9 +34,9 @@ func TestCRMScenario(t *testing.T) {
 
 	// Create people
 	alice := &Object{
-		Type: "Person",
-		Name: "Alice Johnson",
-		Metadata: map[string]interface{}{
+		Kind: "Person",
+		Fields: map[string]interface{}{
+			"name":  "Alice Johnson",
 			"email": "alice@acme.com",
 			"title": "VP of Engineering",
 		},
@@ -44,9 +44,9 @@ func TestCRMScenario(t *testing.T) {
 	require.NoError(t, objRepo.Create(ctx, alice))
 
 	bob := &Object{
-		Type: "Person",
-		Name: "Bob Smith",
-		Metadata: map[string]interface{}{
+		Kind: "Person",
+		Fields: map[string]interface{}{
+			"name":  "Bob Smith",
 			"email": "bob@acme.com",
 			"title": "Senior Engineer",
 		},
@@ -101,7 +101,7 @@ func TestCRMScenario(t *testing.T) {
 
 	aliceCompany, err := objRepo.Get(ctx, aliceCompanyRels[0].TargetID)
 	require.NoError(t, err)
-	assert.Equal(t, "Acme Corporation", aliceCompany.Name)
+	assert.Equal(t, "Acme Corporation", aliceCompany.Fields["name"])
 
 	// Test cascade: Delete Acme should remove work relationships
 	require.NoError(t, objRepo.Delete(ctx, acme.ID))
@@ -118,7 +118,7 @@ func TestCRMScenario(t *testing.T) {
 // TestProjectManagementScenario demonstrates a project management setup.
 func TestProjectManagementScenario(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	objRepo := NewObjectsRepository(db)
 	relRepo := NewRelationshipsRepository(db)
@@ -126,9 +126,9 @@ func TestProjectManagementScenario(t *testing.T) {
 
 	// Create a project
 	project := &Object{
-		Type: "Project",
-		Name: "Website Redesign",
-		Metadata: map[string]interface{}{
+		Kind: "Project",
+		Fields: map[string]interface{}{
+			"name":       "Website Redesign",
 			"status":     "active",
 			"priority":   "high",
 			"start_date": "2025-01-01",
@@ -139,20 +139,20 @@ func TestProjectManagementScenario(t *testing.T) {
 
 	// Create tasks
 	task1 := &Object{
-		Type: "Task",
-		Name: "Design mockups",
-		Metadata: map[string]interface{}{
-			"status":       "completed",
+		Kind: "Task",
+		Fields: map[string]interface{}{
+			"name":            "Design mockups",
+			"status":          "completed",
 			"estimated_hours": 20,
 		},
 	}
 	require.NoError(t, objRepo.Create(ctx, task1))
 
 	task2 := &Object{
-		Type: "Task",
-		Name: "Implement frontend",
-		Metadata: map[string]interface{}{
-			"status":       "in_progress",
+		Kind: "Task",
+		Fields: map[string]interface{}{
+			"name":            "Implement frontend",
+			"status":          "in_progress",
 			"estimated_hours": 40,
 		},
 	}
@@ -160,9 +160,9 @@ func TestProjectManagementScenario(t *testing.T) {
 
 	// Create person
 	developer := &Object{
-		Type: "Person",
-		Name: "Carol Developer",
-		Metadata: map[string]interface{}{
+		Kind: "Person",
+		Fields: map[string]interface{}{
+			"name":  "Carol Developer",
 			"email": "carol@example.com",
 		},
 	}
@@ -206,14 +206,14 @@ func TestProjectManagementScenario(t *testing.T) {
 
 	assignedTask, err := objRepo.Get(ctx, assignments[0].TargetID)
 	require.NoError(t, err)
-	assert.Equal(t, "Implement frontend", assignedTask.Name)
-	assert.Equal(t, "in_progress", assignedTask.Metadata["status"])
+	assert.Equal(t, "Implement frontend", assignedTask.Fields["name"])
+	assert.Equal(t, "in_progress", assignedTask.Fields["status"])
 }
 
 // TestKnowledgeGraphScenario demonstrates a knowledge graph use case.
 func TestKnowledgeGraphScenario(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	objRepo := NewObjectsRepository(db)
 	relRepo := NewRelationshipsRepository(db)
@@ -221,27 +221,27 @@ func TestKnowledgeGraphScenario(t *testing.T) {
 
 	// Create concepts
 	ai := &Object{
-		Type: "Concept",
-		Name: "Artificial Intelligence",
-		Metadata: map[string]interface{}{
+		Kind: "Concept",
+		Fields: map[string]interface{}{
+			"name":       "Artificial Intelligence",
 			"definition": "The simulation of human intelligence in machines",
 		},
 	}
 	require.NoError(t, objRepo.Create(ctx, ai))
 
 	ml := &Object{
-		Type: "Concept",
-		Name: "Machine Learning",
-		Metadata: map[string]interface{}{
+		Kind: "Concept",
+		Fields: map[string]interface{}{
+			"name":       "Machine Learning",
 			"definition": "A subset of AI that enables learning from data",
 		},
 	}
 	require.NoError(t, objRepo.Create(ctx, ml))
 
 	deepLearning := &Object{
-		Type: "Concept",
-		Name: "Deep Learning",
-		Metadata: map[string]interface{}{
+		Kind: "Concept",
+		Fields: map[string]interface{}{
+			"name":       "Deep Learning",
 			"definition": "ML using neural networks with multiple layers",
 		},
 	}
@@ -264,9 +264,9 @@ func TestKnowledgeGraphScenario(t *testing.T) {
 
 	// Create a document that references these concepts
 	paper := &Object{
-		Type: "Document",
-		Name: "Introduction to Neural Networks",
-		Metadata: map[string]interface{}{
+		Kind: "Document",
+		Fields: map[string]interface{}{
+			"name":   "Introduction to Neural Networks",
 			"author": "Dr. Smith",
 			"year":   2024,
 		},
@@ -300,7 +300,7 @@ func TestKnowledgeGraphScenario(t *testing.T) {
 
 	subConcept, err := objRepo.Get(ctx, aiSubconcepts[0].SourceID)
 	require.NoError(t, err)
-	assert.Equal(t, "Machine Learning", subConcept.Name)
+	assert.Equal(t, "Machine Learning", subConcept.Fields["name"])
 
 	// Query: What documents mention Deep Learning?
 	dlMentions, err := relRepo.FindByTarget(ctx, deepLearning.ID, "mentions")
@@ -311,25 +311,25 @@ func TestKnowledgeGraphScenario(t *testing.T) {
 // TestDynamicMetadataEvolution shows how metadata can evolve over time.
 func TestDynamicMetadataEvolution(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	objRepo := NewObjectsRepository(db)
 	ctx := context.Background()
 
-	// Create a product with minimal metadata
+	// Create a product with minimal fields
 	product := &Object{
-		Type: "Product",
-		Name: "Smart Thermostat",
-		Metadata: map[string]interface{}{
-			"sku": "THERM-001",
+		Kind: "Product",
+		Fields: map[string]interface{}{
+			"name": "Smart Thermostat",
+			"sku":  "THERM-001",
 		},
 	}
 	require.NoError(t, objRepo.Create(ctx, product))
 
-	// Later, add more metadata
-	product.Metadata["price"] = 199.99
-	product.Metadata["stock"] = 50
-	product.Metadata["features"] = []interface{}{
+	// Later, add more fields
+	product.Fields["price"] = 199.99
+	product.Fields["stock"] = 50
+	product.Fields["features"] = []interface{}{
 		"WiFi enabled",
 		"Voice control",
 		"Energy saving",
@@ -340,11 +340,11 @@ func TestDynamicMetadataEvolution(t *testing.T) {
 	retrieved, err := objRepo.Get(ctx, product.ID)
 	require.NoError(t, err)
 
-	assert.Equal(t, "THERM-001", retrieved.Metadata["sku"])
-	assert.Equal(t, 199.99, retrieved.Metadata["price"])
-	assert.Equal(t, float64(50), retrieved.Metadata["stock"])
+	assert.Equal(t, "THERM-001", retrieved.Fields["sku"])
+	assert.Equal(t, 199.99, retrieved.Fields["price"])
+	assert.Equal(t, float64(50), retrieved.Fields["stock"])
 
-	features := retrieved.Metadata["features"].([]interface{})
+	features := retrieved.Fields["features"].([]interface{})
 	assert.Len(t, features, 3)
 	assert.Equal(t, "WiFi enabled", features[0])
 }
@@ -352,14 +352,14 @@ func TestDynamicMetadataEvolution(t *testing.T) {
 // TestMultiTypeRelationships demonstrates different relationship types between same objects.
 func TestMultiTypeRelationships(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	objRepo := NewObjectsRepository(db)
 	relRepo := NewRelationshipsRepository(db)
 	ctx := context.Background()
 
-	alice := &Object{Type: "Person", Name: "Alice"}
-	bob := &Object{Type: "Person", Name: "Bob"}
+	alice := &Object{Kind: "Person", Fields: map[string]interface{}{"name": "Alice"}}
+	bob := &Object{Kind: "Person", Fields: map[string]interface{}{"name": "Bob"}}
 
 	require.NoError(t, objRepo.Create(ctx, alice))
 	require.NoError(t, objRepo.Create(ctx, bob))

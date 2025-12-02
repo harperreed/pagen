@@ -42,23 +42,36 @@ func (r *ObjectsRepository) Create(ctx context.Context, obj *Object) error {
 	obj.CreatedAt = now
 	obj.UpdatedAt = now
 
-	metadataJSON, err := json.Marshal(obj.Metadata)
+	// Default values for new fields
+	if obj.CreatedBy == "" {
+		obj.CreatedBy = "system"
+	}
+	if obj.ACL == "" {
+		obj.ACL = "[]"
+	}
+	if obj.Tags == "" {
+		obj.Tags = "[]"
+	}
+
+	fieldsJSON, err := json.Marshal(obj.Fields)
 	if err != nil {
 		return err
 	}
 
 	query := `
-		INSERT INTO objects (id, type, name, metadata, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO objects (id, kind, created_at, updated_at, created_by, acl, tags, fields)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
 		obj.ID,
-		obj.Type,
-		obj.Name,
-		metadataJSON,
+		obj.Kind,
 		obj.CreatedAt,
 		obj.UpdatedAt,
+		obj.CreatedBy,
+		obj.ACL,
+		obj.Tags,
+		fieldsJSON,
 	)
 
 	return err
@@ -67,21 +80,23 @@ func (r *ObjectsRepository) Create(ctx context.Context, obj *Object) error {
 // Get retrieves an object by ID.
 func (r *ObjectsRepository) Get(ctx context.Context, id string) (*Object, error) {
 	query := `
-		SELECT id, type, name, metadata, created_at, updated_at
+		SELECT id, kind, created_at, updated_at, created_by, acl, tags, fields
 		FROM objects
 		WHERE id = ?
 	`
 
 	var obj Object
-	var metadataJSON []byte
+	var fieldsJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&obj.ID,
-		&obj.Type,
-		&obj.Name,
-		&metadataJSON,
+		&obj.Kind,
 		&obj.CreatedAt,
 		&obj.UpdatedAt,
+		&obj.CreatedBy,
+		&obj.ACL,
+		&obj.Tags,
+		&fieldsJSON,
 	)
 
 	if err == sql.ErrNoRows {
@@ -91,12 +106,12 @@ func (r *ObjectsRepository) Get(ctx context.Context, id string) (*Object, error)
 		return nil, err
 	}
 
-	if len(metadataJSON) > 0 && string(metadataJSON) != "null" {
-		if err := json.Unmarshal(metadataJSON, &obj.Metadata); err != nil {
+	if len(fieldsJSON) > 0 && string(fieldsJSON) != "null" {
+		if err := json.Unmarshal(fieldsJSON, &obj.Fields); err != nil {
 			return nil, err
 		}
 	} else {
-		obj.Metadata = make(map[string]interface{})
+		obj.Fields = make(map[string]interface{})
 	}
 
 	return &obj, nil
@@ -110,21 +125,23 @@ func (r *ObjectsRepository) Update(ctx context.Context, obj *Object) error {
 
 	obj.UpdatedAt = time.Now().UTC()
 
-	metadataJSON, err := json.Marshal(obj.Metadata)
+	fieldsJSON, err := json.Marshal(obj.Fields)
 	if err != nil {
 		return err
 	}
 
 	query := `
 		UPDATE objects
-		SET type = ?, name = ?, metadata = ?, updated_at = ?
+		SET kind = ?, created_by = ?, acl = ?, tags = ?, fields = ?, updated_at = ?
 		WHERE id = ?
 	`
 
 	result, err := r.db.ExecContext(ctx, query,
-		obj.Type,
-		obj.Name,
-		metadataJSON,
+		obj.Kind,
+		obj.CreatedBy,
+		obj.ACL,
+		obj.Tags,
+		fieldsJSON,
 		obj.UpdatedAt,
 		obj.ID,
 	)
@@ -166,22 +183,22 @@ func (r *ObjectsRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// List retrieves all objects, optionally filtered by type.
-func (r *ObjectsRepository) List(ctx context.Context, objectType string) ([]*Object, error) {
+// List retrieves all objects, optionally filtered by kind.
+func (r *ObjectsRepository) List(ctx context.Context, objectKind string) ([]*Object, error) {
 	var query string
 	var args []interface{}
 
-	if objectType != "" {
+	if objectKind != "" {
 		query = `
-			SELECT id, type, name, metadata, created_at, updated_at
+			SELECT id, kind, created_at, updated_at, created_by, acl, tags, fields
 			FROM objects
-			WHERE type = ?
+			WHERE kind = ?
 			ORDER BY created_at DESC
 		`
-		args = append(args, objectType)
+		args = append(args, objectKind)
 	} else {
 		query = `
-			SELECT id, type, name, metadata, created_at, updated_at
+			SELECT id, kind, created_at, updated_at, created_by, acl, tags, fields
 			FROM objects
 			ORDER BY created_at DESC
 		`
@@ -197,26 +214,28 @@ func (r *ObjectsRepository) List(ctx context.Context, objectType string) ([]*Obj
 
 	for rows.Next() {
 		var obj Object
-		var metadataJSON []byte
+		var fieldsJSON []byte
 
 		err := rows.Scan(
 			&obj.ID,
-			&obj.Type,
-			&obj.Name,
-			&metadataJSON,
+			&obj.Kind,
 			&obj.CreatedAt,
 			&obj.UpdatedAt,
+			&obj.CreatedBy,
+			&obj.ACL,
+			&obj.Tags,
+			&fieldsJSON,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(metadataJSON) > 0 && string(metadataJSON) != "null" {
-			if err := json.Unmarshal(metadataJSON, &obj.Metadata); err != nil {
+		if len(fieldsJSON) > 0 && string(fieldsJSON) != "null" {
+			if err := json.Unmarshal(fieldsJSON, &obj.Fields); err != nil {
 				return nil, err
 			}
 		} else {
-			obj.Metadata = make(map[string]interface{})
+			obj.Fields = make(map[string]interface{})
 		}
 
 		objects = append(objects, &obj)

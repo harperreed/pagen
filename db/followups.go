@@ -77,19 +77,20 @@ func GetContactCadence(db *sql.DB, contactID uuid.UUID) (*models.ContactCadence,
 func GetFollowupList(db *sql.DB, limit int) ([]models.FollowupContact, error) {
 	query := `
 		SELECT
-			c.id, c.name,
-			json_extract(c.metadata, '$.email') as email,
-			json_extract(c.metadata, '$.phone') as phone,
-			json_extract(c.metadata, '$.company_id') as company_id,
-			json_extract(c.metadata, '$.notes') as notes,
-			json_extract(c.metadata, '$.last_contacted_at') as last_contacted_at,
+			c.id,
+			json_extract(c.fields, '$.name') as name,
+			json_extract(c.fields, '$.email') as email,
+			json_extract(c.fields, '$.phone') as phone,
+			json_extract(c.fields, '$.company_id') as company_id,
+			json_extract(c.fields, '$.notes') as notes,
+			json_extract(c.fields, '$.last_contacted_at') as last_contacted_at,
 			c.created_at, c.updated_at,
 			cc.cadence_days, cc.relationship_strength, cc.priority_score,
 			cc.next_followup_date,
 			CAST((julianday('now') - julianday(cc.last_interaction_date)) AS INTEGER) as days_since
 		FROM objects c
 		INNER JOIN contact_cadence cc ON c.id = cc.contact_id
-		WHERE c.type = 'Contact' AND cc.priority_score > 0
+		WHERE c.kind = 'Contact' AND cc.priority_score > 0
 		ORDER BY cc.priority_score DESC
 		LIMIT ?
 	`
@@ -226,11 +227,11 @@ func LogInteraction(db *sql.DB, interaction *models.InteractionLog) error {
 		return err
 	}
 
-	// Update contact's last_contacted_at in metadata
+	// Update contact's last_contacted_at in fields
 	updateContact := `
 		UPDATE objects
-		SET metadata = json_set(metadata, '$.last_contacted_at', ?)
-		WHERE id = ? AND type = 'Contact'
+		SET fields = json_set(fields, '$.last_contacted_at', ?)
+		WHERE id = ? AND kind = 'Contact'
 	`
 	_, err = db.Exec(updateContact, interaction.Timestamp.Format(time.RFC3339), interaction.ContactID.String())
 	if err != nil {

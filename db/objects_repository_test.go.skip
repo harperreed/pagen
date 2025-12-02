@@ -22,9 +22,9 @@ func TestObjectsRepository_Create(t *testing.T) {
 
 	t.Run("create object with all fields", func(t *testing.T) {
 		obj := &Object{
-			Type: "Activity",
-			Name: "Morning Standup",
-			Metadata: map[string]interface{}{
+			Kind: "Activity",
+			Fields: map[string]interface{}{
+				"name":       "Morning Standup",
 				"duration":   30,
 				"attendees":  []string{"alice", "bob"},
 				"recurring":  true,
@@ -48,8 +48,10 @@ func TestObjectsRepository_Create(t *testing.T) {
 		customID := "custom-id-123"
 		obj := &Object{
 			ID:   customID,
-			Type: "Task",
-			Name: "Custom Task",
+			Kind: "Task",
+			Fields: map[string]interface{}{
+				"name": "Custom Task",
+			},
 		}
 
 		err := repo.Create(ctx, obj)
@@ -58,10 +60,12 @@ func TestObjectsRepository_Create(t *testing.T) {
 		assert.Equal(t, customID, obj.ID, "Should preserve custom ID")
 	})
 
-	t.Run("create object with nil metadata", func(t *testing.T) {
+	t.Run("create object with nil fields", func(t *testing.T) {
 		obj := &Object{
-			Type: "SimpleObject",
-			Name: "No Metadata",
+			Kind: "SimpleObject",
+			Fields: map[string]interface{}{
+				"name": "No Metadata",
+			},
 		}
 
 		err := repo.Create(ctx, obj)
@@ -84,9 +88,9 @@ func TestObjectsRepository_Get(t *testing.T) {
 
 	t.Run("get existing object", func(t *testing.T) {
 		original := &Object{
-			Type: "Activity",
-			Name: "Team Meeting",
-			Metadata: map[string]interface{}{
+			Kind: "Activity",
+			Fields: map[string]interface{}{
+				"name":     "Team Meeting",
 				"location": "Room 404",
 				"urgent":   true,
 				"priority": 5,
@@ -100,11 +104,11 @@ func TestObjectsRepository_Get(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, original.ID, retrieved.ID)
-		assert.Equal(t, original.Type, retrieved.Type)
-		assert.Equal(t, original.Name, retrieved.Name)
-		assert.Equal(t, "Room 404", retrieved.Metadata["location"])
-		assert.Equal(t, true, retrieved.Metadata["urgent"])
-		assert.Equal(t, float64(5), retrieved.Metadata["priority"]) // JSON unmarshals numbers as float64
+		assert.Equal(t, original.Kind, retrieved.Kind)
+		assert.Equal(t, "Team Meeting", retrieved.Fields["name"])
+		assert.Equal(t, "Room 404", retrieved.Fields["location"])
+		assert.Equal(t, true, retrieved.Fields["urgent"])
+		assert.Equal(t, float64(5), retrieved.Fields["priority"]) // JSON unmarshals numbers as float64
 		assert.Equal(t, original.CreatedAt.Unix(), retrieved.CreatedAt.Unix())
 	})
 

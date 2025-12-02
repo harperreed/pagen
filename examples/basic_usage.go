@@ -19,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	// Initialize schema
 	if err := db.InitSchema(database); err != nil {
@@ -37,9 +37,9 @@ func main() {
 	fmt.Println("1. Creating objects...")
 
 	company := &db.Object{
-		Type: "Company",
-		Name: "Tech Startup Inc",
-		Metadata: map[string]interface{}{
+		Kind: "Company",
+		Fields: map[string]interface{}{
+			"name":     "Tech Startup Inc",
 			"domain":   "techstartup.io",
 			"industry": "SaaS",
 			"founded":  2024,
@@ -48,12 +48,12 @@ func main() {
 	if err := objRepo.Create(ctx, company); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("   Created company: %s (ID: %s)\n", company.Name, company.ID)
+	fmt.Printf("   Created company: %s (ID: %s)\n", company.Fields["name"], company.ID)
 
 	person := &db.Object{
-		Type: "Person",
-		Name: "Jane Developer",
-		Metadata: map[string]interface{}{
+		Kind: "Person",
+		Fields: map[string]interface{}{
+			"name":  "Jane Developer",
 			"email": "jane@techstartup.io",
 			"role":  "CTO",
 		},
@@ -61,7 +61,7 @@ func main() {
 	if err := objRepo.Create(ctx, person); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("   Created person: %s (ID: %s)\n\n", person.Name, person.ID)
+	fmt.Printf("   Created person: %s (ID: %s)\n\n", person.Fields["name"], person.ID)
 
 	// Example 2: Create relationships
 	fmt.Println("2. Creating relationships...")
@@ -78,7 +78,7 @@ func main() {
 	if err := relRepo.Create(ctx, employment); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("   Created relationship: %s works_at %s\n\n", person.Name, company.Name)
+	fmt.Printf("   Created relationship: %s works_at %s\n\n", person.Fields["name"], company.Fields["name"])
 
 	// Example 3: Query objects
 	fmt.Println("3. Querying objects...")
@@ -89,7 +89,7 @@ func main() {
 	}
 	fmt.Printf("   Found %d companies:\n", len(companies))
 	for _, c := range companies {
-		fmt.Printf("   - %s (domain: %s)\n", c.Name, c.Metadata["domain"])
+		fmt.Printf("   - %s (domain: %s)\n", c.Fields["name"], c.Fields["domain"])
 	}
 	fmt.Println()
 
@@ -100,21 +100,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("   %s has %d employees:\n", company.Name, len(employments))
+	fmt.Printf("   %s has %d employees:\n", company.Fields["name"], len(employments))
 	for _, emp := range employments {
 		employee, err := objRepo.Get(ctx, emp.SourceID)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("   - %s (%s)\n", employee.Name, emp.Metadata["position"])
+		fmt.Printf("   - %s (%s)\n", employee.Fields["name"], emp.Metadata["position"])
 	}
 	fmt.Println()
 
-	// Example 5: Update object metadata
-	fmt.Println("5. Updating object metadata...")
+	// Example 5: Update object fields
+	fmt.Println("5. Updating object fields...")
 
-	company.Metadata["employee_count"] = 10
-	company.Metadata["funding_stage"] = "Seed"
+	company.Fields["employee_count"] = 10
+	company.Fields["funding_stage"] = "Seed"
 	if err := objRepo.Update(ctx, company); err != nil {
 		log.Fatal(err)
 	}
@@ -123,17 +123,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("   Updated %s:\n", updated.Name)
-	fmt.Printf("   - Employees: %.0f\n", updated.Metadata["employee_count"])
-	fmt.Printf("   - Funding: %s\n\n", updated.Metadata["funding_stage"])
+	fmt.Printf("   Updated %s:\n", updated.Fields["name"])
+	fmt.Printf("   - Employees: %.0f\n", updated.Fields["employee_count"])
+	fmt.Printf("   - Funding: %s\n\n", updated.Fields["funding_stage"])
 
 	// Example 6: Create more complex relationships
 	fmt.Println("6. Creating a project and task hierarchy...")
 
 	project := &db.Object{
-		Type: "Project",
-		Name: "Mobile App Launch",
-		Metadata: map[string]interface{}{
+		Kind: "Project",
+		Fields: map[string]interface{}{
+			"name":     "Mobile App Launch",
 			"status":   "active",
 			"priority": "high",
 		},
@@ -143,12 +143,12 @@ func main() {
 	}
 
 	task := &db.Object{
-		Type: "Task",
-		Name: "Design user interface",
-		Metadata: map[string]interface{}{
-			"status":     "in_progress",
-			"assignee":   person.Name,
-			"due_date":   "2025-01-15",
+		Kind: "Task",
+		Fields: map[string]interface{}{
+			"name":     "Design user interface",
+			"status":   "in_progress",
+			"assignee": person.Fields["name"],
+			"due_date": "2025-01-15",
 		},
 	}
 	if err := objRepo.Create(ctx, task); err != nil {
@@ -171,7 +171,7 @@ func main() {
 		TargetID: task.ID,
 		Type:     "assigned_to",
 		Metadata: map[string]interface{}{
-			"assigned_date": "2025-01-01",
+			"assigned_date":   "2025-01-01",
 			"estimated_hours": 20,
 		},
 	}
@@ -179,9 +179,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("   Created project: %s\n", project.Name)
-	fmt.Printf("   Created task: %s\n", task.Name)
-	fmt.Printf("   Assigned %s to task\n\n", person.Name)
+	fmt.Printf("   Created project: %s\n", project.Fields["name"])
+	fmt.Printf("   Created task: %s\n", task.Fields["name"])
+	fmt.Printf("   Assigned %s to task\n\n", person.Fields["name"])
 
 	// Example 7: Complex queries
 	fmt.Println("7. Complex queries...")
@@ -191,29 +191,29 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("   Project '%s' has %d tasks\n", project.Name, len(projectTasks))
+	fmt.Printf("   Project '%s' has %d tasks\n", project.Fields["name"], len(projectTasks))
 
 	// Find what Jane is assigned to
 	janeAssignments, err := relRepo.FindBySource(ctx, person.ID, "assigned_to")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("   %s is assigned to %d tasks\n\n", person.Name, len(janeAssignments))
+	fmt.Printf("   %s is assigned to %d tasks\n\n", person.Fields["name"], len(janeAssignments))
 
-	// Example 8: List all objects by type
+	// Example 8: List all objects by kind
 	fmt.Println("8. Summary of all objects:")
 	allObjects, err := objRepo.List(ctx, "")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	typeCounts := make(map[string]int)
+	kindCounts := make(map[string]int)
 	for _, obj := range allObjects {
-		typeCounts[obj.Type]++
+		kindCounts[obj.Kind]++
 	}
 
-	for objType, count := range typeCounts {
-		fmt.Printf("   - %s: %d\n", objType, count)
+	for objKind, count := range kindCounts {
+		fmt.Printf("   - %s: %d\n", objKind, count)
 	}
 
 	fmt.Println("\nExample completed successfully!")

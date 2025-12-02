@@ -418,7 +418,7 @@ func TestAddDealNote(t *testing.T) {
 
 	originalLastActivity := dealData["last_activity_at"].(time.Time)
 	if !deal.LastActivityAt.After(originalLastActivity) {
-		t.Error("Deal's last_activity_at should be updated after adding note")
+		t.Errorf("Deal's last_activity_at should be updated after adding note. Original: %v, Updated: %v", originalLastActivity, deal.LastActivityAt)
 	}
 }
 

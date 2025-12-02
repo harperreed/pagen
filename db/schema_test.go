@@ -35,8 +35,9 @@ func TestInitSchema(t *testing.T) {
 
 	// Verify objects indexes
 	objectIndexes := []string{
-		"idx_objects_type",
+		"idx_objects_kind",
 		"idx_objects_created_at",
+		"idx_objects_created_by",
 	}
 	for _, idx := range objectIndexes {
 		var indexName string
