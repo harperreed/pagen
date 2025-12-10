@@ -125,10 +125,25 @@ func (m Model) View() string {
 }
 
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q", "ctrl+c":
+	// Check for global quit keys first, before view-specific handlers
+	key := msg.String()
+
+	// Handle quit keys (q, ctrl+c always quit; esc quits except in edit mode)
+	if key == "q" || key == "ctrl+c" {
 		return m, tea.Quit
-	case "?":
+	}
+	if key == "esc" && m.viewMode != ViewEdit {
+		return m, tea.Quit
+	}
+
+	// In edit mode, esc cancels the edit
+	if key == "esc" && m.viewMode == ViewEdit {
+		m.viewMode = ViewList
+		return m, nil
+	}
+
+	// Help key
+	if key == "?" {
 		// TODO: Show help overlay
 		return m, nil
 	}
