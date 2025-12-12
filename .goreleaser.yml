@@ -1,3 +1,6 @@
+# ABOUTME: GoReleaser configuration for building and releasing pagen
+# ABOUTME: Builds macOS binaries and publishes to Homebrew tap; Linux handled by CI workflow
+
 version: 2
 
 before:
