@@ -213,14 +213,15 @@ func TestDaemonGracefulShutdown(t *testing.T) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM)
 
-	cleaned := false
+	// Use channel to signal cleanup completion (avoids data race)
+	cleanupDone := make(chan struct{})
 
 	// Simulate daemon
 	go func() {
 		<-sigChan
 		// Cleanup
 		ticker.Stop()
-		cleaned = true
+		close(cleanupDone)
 	}()
 
 	// Wait for daemon to start
@@ -229,10 +230,11 @@ func TestDaemonGracefulShutdown(t *testing.T) {
 	// Send shutdown signal
 	sigChan <- syscall.SIGTERM
 
-	// Wait for cleanup
-	time.Sleep(100 * time.Millisecond)
-
-	if !cleaned {
-		t.Error("daemon did not clean up resources")
+	// Wait for cleanup with timeout
+	select {
+	case <-cleanupDone:
+		// Success - cleanup completed
+	case <-time.After(1 * time.Second):
+		t.Error("daemon did not clean up resources within timeout")
 	}
 }
