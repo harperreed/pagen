@@ -18,7 +18,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const version = "0.1.3"
+const version = "0.1.9"
 
 func main() {
 	// Load .env file if it exists (ignore errors if not found)
@@ -27,7 +27,7 @@ func main() {
 	// Global flags
 	showVersion := flag.Bool("version", false, "Show version and exit")
 	showHelp := flag.Bool("help", false, "Show help and exit")
-	dbPath := flag.String("db-path", "", "Database path (default: ~/.local/share/crm/crm.db)")
+	dbPath := flag.String("db-path", "", "Database path (default: ~/.local/share/pagen/pagen.db)")
 	initOnly := flag.Bool("init", false, "Initialize database and exit")
 
 	// Parse global flags but don't fail on unknown (for subcommands)
@@ -391,7 +391,7 @@ func getDatabasePath(dbPath string) string {
 	if dbPath != "" {
 		return dbPath
 	}
-	return filepath.Join(xdg.DataHome, "crm", "crm.db")
+	return filepath.Join(xdg.DataHome, "pagen", "pagen.db")
 }
 
 func printUsage() {
@@ -402,7 +402,7 @@ USAGE:
 
 GLOBAL FLAGS:
   --version              Show version and exit
-  --db-path <path>       Database path (default: ~/.local/share/crm/crm.db)
+  --db-path <path>       Database path (default: ~/.local/share/pagen/pagen.db)
   --init                 Initialize database and exit (use with 'crm')
 
 COMMANDS:

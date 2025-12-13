@@ -194,7 +194,7 @@ pagen web [--port 8080]        # Web UI server
 ### Global Flags
 
 - `--version` - Show version and exit
-- `--db-path <path>` - Use custom database path (default: `~/.local/share/crm/crm.db`)
+- `--db-path <path>` - Use custom database path (default: `~/.local/share/pagen/pagen.db`)
 - `--init` - Initialize database and exit (use with `crm` command)
 
 ### Available Commands
@@ -727,7 +727,7 @@ Future phases will add bidirectional sync, automated updates, relationship synci
 ## Database
 
 The server uses SQLite and stores data at:
-- **Default:** `~/.local/share/crm/crm.db` (XDG data directory)
+- **Default:** `~/.local/share/pagen/pagen.db` (XDG data directory)
 - **Custom:** Specify with `--db-path` flag
 
 ### Database Schema
