@@ -3,16 +3,41 @@
 package cli
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"text/tabwriter"
+
+	"suitesync/vault"
 
 	"github.com/google/uuid"
 	"github.com/harperreed/pagen/db"
 	"github.com/harperreed/pagen/models"
+	"github.com/harperreed/pagen/sync"
 )
+
+// queueContactToVault queues a contact change to vault sync.
+// Sync failures are non-fatal - the local operation already succeeded.
+func queueContactToVault(database *sql.DB, contact *models.Contact, companyName string, op vault.Op) {
+	cfg, err := sync.LoadVaultConfig()
+	if err != nil || !cfg.IsConfigured() {
+		return // Vault sync not configured, silently skip
+	}
+
+	syncer, err := sync.NewVaultSyncer(cfg, database)
+	if err != nil {
+		log.Printf("warning: vault sync init failed: %v", err)
+		return
+	}
+	defer func() { _ = syncer.Close() }()
+
+	if err := syncer.QueueContactChange(context.Background(), contact, companyName, op); err != nil {
+		log.Printf("warning: vault sync queue failed: %v", err)
+	}
+}
 
 // AddContactCommand adds a new contact.
 func AddContactCommand(database *sql.DB, args []string) error {
@@ -57,6 +82,9 @@ func AddContactCommand(database *sql.DB, args []string) error {
 	if err := db.CreateContact(database, contact); err != nil {
 		return fmt.Errorf("failed to create contact: %w", err)
 	}
+
+	// Queue to vault sync (non-fatal)
+	queueContactToVault(database, contact, *company, vault.OpUpsert)
 
 	fmt.Printf("✓ Contact created: %s (ID: %s)\n", contact.Name, contact.ID)
 	if contact.Email != "" {
@@ -192,6 +220,18 @@ func UpdateContactCommand(database *sql.DB, args []string) error {
 		return fmt.Errorf("failed to update contact: %w", err)
 	}
 
+	// Look up company name for vault sync
+	var companyName string
+	if existing.CompanyID != nil {
+		companyRecord, err := db.GetCompany(database, *existing.CompanyID)
+		if err == nil && companyRecord != nil {
+			companyName = companyRecord.Name
+		}
+	}
+
+	// Queue to vault sync (non-fatal)
+	queueContactToVault(database, existing, companyName, vault.OpUpsert)
+
 	fmt.Printf("✓ Contact updated: %s (ID: %s)\n", existing.Name, contactID)
 	return nil
 }
@@ -211,10 +251,31 @@ func DeleteContactCommand(database *sql.DB, args []string) error {
 		return fmt.Errorf("invalid contact ID: %w", err)
 	}
 
+	// Get contact before deletion for vault sync
+	contact, err := db.GetContact(database, contactID)
+	if err != nil {
+		return fmt.Errorf("contact not found: %w", err)
+	}
+	if contact == nil {
+		return fmt.Errorf("contact not found: %s", contactID)
+	}
+
+	// Look up company name for vault sync
+	var companyName string
+	if contact.CompanyID != nil {
+		companyRecord, err := db.GetCompany(database, *contact.CompanyID)
+		if err == nil && companyRecord != nil {
+			companyName = companyRecord.Name
+		}
+	}
+
 	err = db.DeleteContact(database, contactID)
 	if err != nil {
 		return fmt.Errorf("failed to delete contact: %w", err)
 	}
+
+	// Queue to vault sync (non-fatal)
+	queueContactToVault(database, contact, companyName, vault.OpDelete)
 
 	fmt.Printf("✓ Contact deleted: %s\n", contactID)
 	return nil

@@ -3,16 +3,41 @@
 package cli
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"text/tabwriter"
+
+	"suitesync/vault"
 
 	"github.com/google/uuid"
 	"github.com/harperreed/pagen/db"
 	"github.com/harperreed/pagen/models"
+	"github.com/harperreed/pagen/sync"
 )
+
+// queueCompanyToVault queues a company change to vault sync.
+// Sync failures are non-fatal - the local operation already succeeded.
+func queueCompanyToVault(database *sql.DB, company *models.Company, op vault.Op) {
+	cfg, err := sync.LoadVaultConfig()
+	if err != nil || !cfg.IsConfigured() {
+		return
+	}
+
+	syncer, err := sync.NewVaultSyncer(cfg, database)
+	if err != nil {
+		log.Printf("warning: vault sync init failed: %v", err)
+		return
+	}
+	defer func() { _ = syncer.Close() }()
+
+	if err := syncer.QueueCompanyChange(context.Background(), company, op); err != nil {
+		log.Printf("warning: vault sync queue failed: %v", err)
+	}
+}
 
 // AddCompanyCommand adds a new company.
 func AddCompanyCommand(database *sql.DB, args []string) error {
@@ -37,6 +62,9 @@ func AddCompanyCommand(database *sql.DB, args []string) error {
 	if err := db.CreateCompany(database, company); err != nil {
 		return fmt.Errorf("failed to create company: %w", err)
 	}
+
+	// Queue to vault sync (non-fatal)
+	queueCompanyToVault(database, company, vault.OpUpsert)
 
 	fmt.Printf("✓ Company created: %s (ID: %s)\n", company.Name, company.ID)
 	if company.Domain != "" {
@@ -137,6 +165,9 @@ func UpdateCompanyCommand(database *sql.DB, args []string) error {
 		return fmt.Errorf("failed to update company: %w", err)
 	}
 
+	// Queue to vault sync (non-fatal)
+	queueCompanyToVault(database, existing, vault.OpUpsert)
+
 	fmt.Printf("✓ Company updated: %s (ID: %s)\n", existing.Name, companyID)
 	return nil
 }
@@ -156,10 +187,22 @@ func DeleteCompanyCommand(database *sql.DB, args []string) error {
 		return fmt.Errorf("invalid company ID: %w", err)
 	}
 
+	// Get company before deletion for vault sync
+	company, err := db.GetCompany(database, companyID)
+	if err != nil {
+		return fmt.Errorf("company not found: %w", err)
+	}
+	if company == nil {
+		return fmt.Errorf("company not found: %s", companyID)
+	}
+
 	err = db.DeleteCompany(database, companyID)
 	if err != nil {
 		return fmt.Errorf("failed to delete company: %w", err)
 	}
+
+	// Queue to vault sync (non-fatal)
+	queueCompanyToVault(database, company, vault.OpDelete)
 
 	fmt.Printf("✓ Company deleted: %s\n", companyID)
 	return nil

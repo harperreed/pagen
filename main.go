@@ -374,9 +374,38 @@ func main() {
 			if err := cli.SyncDaemonCommand(database, syncArgs); err != nil {
 				log.Fatalf("Error: %v", err)
 			}
+		case "vault-init":
+			if err := cli.SyncVaultInitCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "vault-login":
+			if err := cli.SyncVaultLoginCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "vault-status":
+			if err := cli.SyncVaultStatusCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "vault-now":
+			if err := cli.SyncVaultNowCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "vault-pending":
+			if err := cli.SyncVaultPendingCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "vault-logout":
+			if err := cli.SyncVaultLogoutCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "vault-wipe":
+			if err := cli.SyncVaultWipeCommand(database, syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
 		default:
 			fmt.Printf("Unknown sync command: %s\n", syncCommand)
 			fmt.Println("Commands: init, contacts, calendar, gmail, status, reset, daemon")
+			fmt.Println("Vault commands: vault-init, vault-login, vault-status, vault-now, vault-pending, vault-logout, vault-wipe")
 			os.Exit(1)
 		}
 
@@ -521,6 +550,27 @@ SYNC COMMANDS:
 
   pagen sync reset <service>     Reset stuck sync state
                                  Services: contacts, calendar, gmail, all
+
+  pagen sync vault-init          Initialize E2E encrypted vault sync
+                                 Generates a unique device ID for this device
+
+  pagen sync vault-login         Login to vault sync server
+                                 Authenticates with email, password, and recovery phrase
+                                 Default server: https://api.storeusa.org
+
+  pagen sync vault-status        Show vault sync status
+                                 Displays configuration and pending changes
+
+  pagen sync vault-now           Sync vault now
+                                 Pushes local changes and pulls remote updates
+
+  pagen sync vault-pending       Show pending changes waiting to sync
+
+  pagen sync vault-logout        Logout from vault sync
+                                 Clears tokens but preserves recovery key
+
+  pagen sync vault-wipe          Remove all vault sync data
+                                 WARNING: Deletes local vault database
 
 EXAMPLES:
   # Start MCP server for Claude Desktop
