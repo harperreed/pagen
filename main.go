@@ -18,7 +18,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const version = "0.1.9"
+const version = "0.1.10"
 
 func main() {
 	// Load .env file if it exists (ignore errors if not found)
