@@ -82,14 +82,14 @@ func (m Model) renderSyncView() string {
 	s.WriteString(syncValueStyle.Render(cfg.Host))
 	s.WriteString("\n")
 
-	// Link status
+	// Connection status
 	s.WriteString(syncLabelStyle.Render("Status:"))
-	if cfg.Linked {
-		s.WriteString(syncEnabledStyle.Render("✓ Linked"))
+	if m.client.IsConnected() {
+		s.WriteString(syncEnabledStyle.Render("✓ Connected"))
 	} else {
-		s.WriteString(syncDisabledStyle.Render("✗ Not linked"))
+		s.WriteString(syncDisabledStyle.Render("✗ Not connected"))
 		s.WriteString("\n\n")
-		s.WriteString(syncMessageStyle.Render("Run 'pagen charm link' to connect to the sync server."))
+		s.WriteString(syncMessageStyle.Render("Check your SSH keys and charm configuration."))
 	}
 	s.WriteString("\n")
 
@@ -103,7 +103,7 @@ func (m Model) renderSyncView() string {
 	s.WriteString("\n\n")
 
 	// Sync actions section
-	if cfg.Linked {
+	if m.client.IsConnected() {
 		s.WriteString(syncHeaderStyle.Render("Actions"))
 		s.WriteString("\n\n")
 
@@ -150,10 +150,9 @@ func (m Model) renderSyncView() string {
 }
 
 func (m Model) renderSyncHelp() string {
-	cfg := m.client.Config()
 	var help []string
 
-	if cfg.Linked {
+	if m.client.IsConnected() {
 		help = []string{
 			"↑/↓: Select action",
 			"Enter: Execute",
@@ -162,7 +161,7 @@ func (m Model) renderSyncHelp() string {
 		}
 	} else {
 		help = []string{
-			"Run 'pagen charm link' in terminal to connect",
+			"Check SSH keys and charm configuration",
 		}
 	}
 
@@ -171,7 +170,7 @@ func (m Model) renderSyncHelp() string {
 }
 
 func (m Model) handleSyncKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	cfg := m.client.Config()
+	connected := m.client.IsConnected()
 
 	switch msg.String() {
 	case "up", "k":
@@ -183,7 +182,7 @@ func (m Model) handleSyncKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedService++
 		}
 	case "enter":
-		if !cfg.Linked {
+		if !connected {
 			return m, nil
 		}
 		// Execute selected action
@@ -195,12 +194,12 @@ func (m Model) handleSyncKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "s":
 		// Quick sync
-		if cfg.Linked {
+		if connected {
 			return m.triggerSync()
 		}
 	case "a":
 		// Toggle auto-sync
-		if cfg.Linked {
+		if connected {
 			return m.toggleAutoSync()
 		}
 	case "esc":

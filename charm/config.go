@@ -29,9 +29,6 @@ type Config struct {
 
 	// AutoSync enables automatic sync after every write operation
 	AutoSync bool `json:"auto_sync"`
-
-	// Linked indicates the device has been linked via `charm link`
-	Linked bool `json:"linked"`
 }
 
 // DefaultConfig returns a new config with sensible defaults.
@@ -39,7 +36,6 @@ func DefaultConfig() *Config {
 	return &Config{
 		Host:     DefaultCharmHost,
 		AutoSync: true,
-		Linked:   false,
 	}
 }
 
@@ -97,11 +93,6 @@ func (c *Config) Save() error {
 	return os.WriteFile(path, data, 0600)
 }
 
-// IsConfigured returns true if the device has been linked.
-func (c *Config) IsConfigured() bool {
-	return c.Linked
-}
-
 // SetHost sets the charm server host and saves.
 func (c *Config) SetHost(host string) error {
 	c.Host = host
@@ -111,17 +102,5 @@ func (c *Config) SetHost(host string) error {
 // SetAutoSync enables or disables auto-sync and saves.
 func (c *Config) SetAutoSync(enabled bool) error {
 	c.AutoSync = enabled
-	return c.Save()
-}
-
-// MarkLinked marks the device as linked and saves.
-func (c *Config) MarkLinked() error {
-	c.Linked = true
-	return c.Save()
-}
-
-// MarkUnlinked marks the device as unlinked and saves.
-func (c *Config) MarkUnlinked() error {
-	c.Linked = false
 	return c.Save()
 }

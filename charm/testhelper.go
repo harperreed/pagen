@@ -172,7 +172,6 @@ func NewTestClient(t *testing.T) (*Client, func()) {
 	cfg := &Config{
 		Host:     "localhost",
 		AutoSync: false,
-		Linked:   false,
 	}
 
 	// Create a wrapper that embeds testClient to satisfy the Client interface

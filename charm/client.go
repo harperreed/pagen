@@ -50,7 +50,7 @@ func InitClient() error {
 		}
 
 		// Sync on startup to pull remote changes
-		if cfg.AutoSync && cfg.Linked {
+		if cfg.AutoSync {
 			_ = db.Sync()
 		}
 	})
@@ -87,7 +87,7 @@ func NewClient(cfg *Config) (*Client, error) {
 	}
 
 	// Sync on startup to pull remote changes
-	if cfg.AutoSync && cfg.Linked {
+	if cfg.AutoSync {
 		_ = db.Sync()
 	}
 
@@ -120,6 +120,16 @@ func (c *Client) ID() (string, error) {
 		return "", fmt.Errorf("failed to create charm client: %w", err)
 	}
 	return cc.ID()
+}
+
+// IsConnected checks if the client can connect to charm cloud.
+// Returns true if we can get a user ID, false otherwise.
+func (c *Client) IsConnected() bool {
+	if c.testClient != nil {
+		return true // Test client is always "connected"
+	}
+	_, err := c.ID()
+	return err == nil
 }
 
 // Sync performs a manual sync with the charm server.
@@ -155,7 +165,7 @@ func (c *Client) Set(key, value []byte) error {
 	}
 
 	// Sync while still holding lock to avoid race condition
-	if c.config.AutoSync && c.config.Linked {
+	if c.config.AutoSync {
 		_ = c.kv.Sync()
 	}
 	return nil
@@ -174,7 +184,7 @@ func (c *Client) Delete(key []byte) error {
 	}
 
 	// Sync while still holding lock to avoid race condition
-	if c.config.AutoSync && c.config.Linked {
+	if c.config.AutoSync {
 		_ = c.kv.Sync()
 	}
 	return nil

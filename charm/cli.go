@@ -11,8 +11,7 @@ import (
 )
 
 // SyncLinkCommand links this device to a Charm account
-// Uses SSH key auth - first run on a new device will create an account
-// Subsequent devices can link via QR code: `charm link`.
+// Uses SSH key auth - charm handles this automatically via SSH keys.
 func SyncLinkCommand(args []string) error {
 	fs := flag.NewFlagSet("sync link", flag.ExitOnError)
 	_ = fs.Parse(args)
@@ -22,39 +21,35 @@ func SyncLinkCommand(args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if cfg.Linked {
-		fmt.Println("✓ Device already linked")
-		return showSyncStatus(cfg)
+	fmt.Printf("Linking to Charm Cloud (%s)...\n\n", cfg.Host)
+	fmt.Println("Charm uses SSH key authentication.")
+
+	// Get client to test connection
+	c, err := GetClient()
+	if err != nil {
+		return fmt.Errorf("failed to initialize client: %w", err)
 	}
 
-	fmt.Println("Linking device to Charm account...")
-	fmt.Printf("Server: %s\n\n", cfg.Host)
+	// Test connection by syncing
+	if err := c.Sync(); err != nil {
+		return fmt.Errorf("link failed: %w", err)
+	}
 
-	// The charm client uses SSH keys automatically
-	// On first run, it creates an account
-	// On subsequent devices, use `charm link` to scan QR code
+	// Get and display ID
 	cc, err := client.NewClientWithDefaults()
 	if err != nil {
-		return fmt.Errorf("failed to create charm client: %w", err)
+		return fmt.Errorf("failed to get charm client: %w", err)
 	}
 
 	id, err := cc.ID()
 	if err != nil {
-		fmt.Println("No account found. Creating new account...")
-		fmt.Println("\nTo link additional devices:")
-		fmt.Println("  1. Run 'charm link' to display a QR code")
-		fmt.Println("  2. Scan the code on your other device")
-		fmt.Println("  3. Both devices will share the same data")
-		return fmt.Errorf("run 'charm link' to complete setup: %w", err)
+		fmt.Println("✓ Device linked (ID unavailable)")
+	} else {
+		fmt.Printf("✓ Linked to account: %s\n", id)
 	}
 
-	// Mark as linked
-	if err := cfg.MarkLinked(); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
-	fmt.Printf("✓ Linked to account: %s\n", id)
 	fmt.Printf("✓ Auto-sync: %v\n", cfg.AutoSync)
+	fmt.Println("\nYour device is now syncing with Charm Cloud!")
 
 	return nil
 }
@@ -76,55 +71,52 @@ func showSyncStatus(cfg *Config) error {
 	fmt.Println("Charm Sync Status")
 	fmt.Println("─────────────────")
 	fmt.Printf("Server:    %s\n", cfg.Host)
-	fmt.Printf("Linked:    %v\n", cfg.Linked)
 	fmt.Printf("Auto-sync: %v\n", cfg.AutoSync)
 
-	if cfg.Linked {
-		// Try to get user ID
-		cc, err := client.NewClientWithDefaults()
-		if err == nil {
-			if id, err := cc.ID(); err == nil {
-				fmt.Printf("User ID:   %s\n", id)
-			}
-		}
+	// Try to get user ID to check connection status
+	cc, err := client.NewClientWithDefaults()
+	if err != nil {
+		fmt.Println("\nStatus: Not connected")
+		fmt.Println("\nCharm uses SSH keys for authentication - no login required!")
+		return nil //nolint:nilerr // Intentionally returning nil - not connected is a valid state, not an error
+	}
 
-		// Show KV stats
-		c, err := GetClient()
+	id, err := cc.ID()
+	if err != nil {
+		fmt.Println("\nStatus: Connected (ID unavailable)")
+	} else {
+		fmt.Println("\nStatus: Connected to Charm Cloud")
+		fmt.Printf("ID:        %s\n", id)
+	}
+
+	// Show KV stats
+	c, err := GetClient()
+	if err == nil {
+		keys, err := c.Keys()
 		if err == nil {
-			keys, err := c.Keys()
-			if err == nil {
-				fmt.Printf("Keys:      %d\n", len(keys))
-			}
+			fmt.Printf("Keys:      %d\n", len(keys))
 		}
 	}
+
+	fmt.Println("\nCharm uses SSH keys for authentication - no login required!")
+	fmt.Println("Sync happens automatically in the background.")
 
 	return nil
 }
 
 // SyncUnlinkCommand disconnects this device from the Charm account
-// Local data is preserved but will no longer sync.
+// Note: Charm doesn't provide a direct "unlink" API - users should remove
+// SSH keys from their Charm account to fully unlink.
 func SyncUnlinkCommand(args []string) error {
 	fs := flag.NewFlagSet("sync unlink", flag.ExitOnError)
 	_ = fs.Parse(args)
 
-	cfg, err := LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	if !cfg.Linked {
-		fmt.Println("Device is not linked")
-		return nil
-	}
-
-	// Mark as unlinked
-	if err := cfg.MarkUnlinked(); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
-	fmt.Println("✓ Device unlinked")
-	fmt.Println("  Local data preserved but sync disabled")
-	fmt.Println("  Run 'pagen sync link' to re-enable sync")
+	fmt.Println("To unlink your device from Charm Cloud:")
+	fmt.Println()
+	fmt.Println("  1. Remove this device's SSH key from your Charm account")
+	fmt.Println("  2. Delete local charm data: rm -rf ~/.local/share/charm")
+	fmt.Println()
+	fmt.Println("Local pagen data will be preserved in ~/.local/share/pagen")
 
 	return nil
 }
@@ -144,11 +136,6 @@ func SyncWipeCommand(args []string) error {
 		return nil
 	}
 
-	cfg, err := LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
 	c, err := GetClient()
 	if err != nil {
 		return fmt.Errorf("failed to get client: %w", err)
@@ -159,11 +146,9 @@ func SyncWipeCommand(args []string) error {
 		return fmt.Errorf("failed to reset KV store: %w", err)
 	}
 
-	// Mark as unlinked
-	_ = cfg.MarkUnlinked()
-
 	fmt.Println("✓ All data wiped")
-	fmt.Println("  Run 'pagen sync link' to set up again")
+	fmt.Println("Your Charm account is still linked.")
+	fmt.Println("You can start adding data again.")
 
 	return nil
 }
@@ -173,15 +158,6 @@ func SyncNowCommand(args []string) error {
 	fs := flag.NewFlagSet("sync now", flag.ExitOnError)
 	verbose := fs.Bool("verbose", false, "Show verbose output")
 	_ = fs.Parse(args)
-
-	cfg, err := LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	if !cfg.Linked {
-		return fmt.Errorf("device not linked. Run 'pagen sync link' first")
-	}
 
 	c, err := GetClient()
 	if err != nil {
