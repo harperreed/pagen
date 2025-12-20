@@ -3,7 +3,7 @@ module github.com/harperreed/pagen
 go 1.24.0
 
 // Use 2389-research charm fork for self-hosted server (charm.2389.dev)
-replace github.com/charmbracelet/charm => github.com/2389-research/charm v0.0.0-20251219202940-c2de8571a99a
+replace github.com/charmbracelet/charm => /Users/harper/Public/src/2389/charm
 
 require (
 	github.com/adrg/xdg v0.5.3
@@ -104,5 +104,5 @@ require (
 	modernc.org/libc v1.66.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.40.1 // indirect
+	modernc.org/sqlite v1.41.0 // indirect
 )

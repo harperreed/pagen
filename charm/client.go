@@ -108,7 +108,7 @@ func (c *Client) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	// Note: charm/kv doesn't expose Close() directly
-	// The underlying BadgerDB will be cleaned up on process exit
+	// The underlying SQLite database will be cleaned up on process exit
 	return nil
 }
 
