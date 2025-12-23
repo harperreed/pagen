@@ -6,6 +6,8 @@ package charm
 import (
 	"flag"
 	"fmt"
+
+	"github.com/charmbracelet/charm/kv"
 )
 
 // SyncLinkCommand links this device to a Charm account
@@ -200,6 +202,105 @@ func SetAutoSyncCommand(args []string) error {
 		}
 		fmt.Println("✓ Auto-sync disabled")
 	}
+
+	return nil
+}
+
+// SyncRepairCommand runs database repair operations.
+func SyncRepairCommand(args []string) error {
+	fs := flag.NewFlagSet("sync repair", flag.ExitOnError)
+	force := fs.Bool("force", false, "Force repair even if integrity check passes")
+	_ = fs.Parse(args)
+
+	fmt.Println("Running database repair...")
+
+	result, err := kv.Repair(AppName, *force)
+	if err != nil {
+		return fmt.Errorf("repair failed: %w", err)
+	}
+
+	// Show repair results
+	fmt.Println("\nRepair Results:")
+	fmt.Printf("  WAL Checkpointed: %v\n", result.WalCheckpointed)
+	fmt.Printf("  SHM Removed:      %v\n", result.ShmRemoved)
+	fmt.Printf("  Integrity OK:     %v\n", result.IntegrityOK)
+	fmt.Printf("  Vacuumed:         %v\n", result.Vacuumed)
+
+	if result.IntegrityOK {
+		fmt.Println("\n✓ Database is healthy")
+	} else {
+		fmt.Println("\n⚠ Database integrity check failed")
+	}
+
+	return nil
+}
+
+// SyncResetCommand resets the local database while preserving cloud data.
+func SyncResetCommand(args []string) error {
+	fs := flag.NewFlagSet("sync reset", flag.ExitOnError)
+	_ = fs.Parse(args)
+
+	// Ask for confirmation
+	fmt.Println("⚠ WARNING: This will reset your local database!")
+	fmt.Println("  - Local database will be cleared")
+	fmt.Println("  - Cloud data will be preserved")
+	fmt.Println("  - Next sync will download fresh data from cloud")
+	fmt.Print("\nContinue? (y/N): ")
+
+	var response string
+	if _, err := fmt.Scanln(&response); err != nil {
+		return fmt.Errorf("failed to read confirmation: %w", err)
+	}
+
+	if response != "y" && response != "Y" {
+		fmt.Println("Cancelled")
+		return nil
+	}
+
+	if err := kv.Reset(AppName); err != nil {
+		return fmt.Errorf("reset failed: %w", err)
+	}
+
+	fmt.Println("\n✓ Local database reset")
+	fmt.Println("Run 'pagen sync now' to download fresh data from cloud")
+
+	return nil
+}
+
+// SyncWipeDBCommand completely wipes both local and cloud database.
+func SyncWipeDBCommand(args []string) error {
+	fs := flag.NewFlagSet("sync wipedb", flag.ExitOnError)
+	_ = fs.Parse(args)
+
+	// Ask for typed confirmation
+	fmt.Println("⚠⚠⚠ DANGER: This will PERMANENTLY DELETE all data! ⚠⚠⚠")
+	fmt.Println("  - Local database will be deleted")
+	fmt.Println("  - Cloud backups will be deleted")
+	fmt.Println("  - This action CANNOT be undone")
+	fmt.Print("\nType 'wipe' to confirm: ")
+
+	var response string
+	if _, err := fmt.Scanln(&response); err != nil {
+		return fmt.Errorf("failed to read confirmation: %w", err)
+	}
+
+	if response != "wipe" {
+		fmt.Println("Cancelled")
+		return nil
+	}
+
+	result, err := kv.Wipe(AppName)
+	if err != nil {
+		return fmt.Errorf("wipe failed: %w", err)
+	}
+
+	// Show wipe results
+	fmt.Println("\nWipe Results:")
+	fmt.Printf("  Cloud Backups Deleted: %v\n", result.CloudBackupsDeleted)
+	fmt.Printf("  Local Files Deleted:   %v\n", result.LocalFilesDeleted)
+
+	fmt.Println("\n✓ All data wiped")
+	fmt.Println("You can start fresh by adding new data")
 
 	return nil
 }

@@ -312,7 +312,7 @@ func main() {
 		// Charm KV sync commands
 		if len(commandArgs) == 0 {
 			fmt.Println("Usage: pagen sync <command>")
-			fmt.Println("Commands: link, status, unlink, wipe, now, auto")
+			fmt.Println("Commands: link, status, unlink, wipe, wipedb, reset, repair, now, auto")
 			os.Exit(1)
 		}
 
@@ -337,6 +337,18 @@ func main() {
 			if err := charm.SyncWipeCommand(syncArgs); err != nil {
 				log.Fatalf("Error: %v", err)
 			}
+		case "wipedb":
+			if err := charm.SyncWipeDBCommand(syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "reset":
+			if err := charm.SyncResetCommand(syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+		case "repair":
+			if err := charm.SyncRepairCommand(syncArgs); err != nil {
+				log.Fatalf("Error: %v", err)
+			}
 		case "now":
 			if err := charm.SyncNowCommand(syncArgs); err != nil {
 				log.Fatalf("Error: %v", err)
@@ -347,7 +359,7 @@ func main() {
 			}
 
 		// Legacy Google sync commands (deprecated - now using Charm KV)
-		case "init", "contacts", "calendar", "gmail", "reset", "daemon":
+		case "init", "contacts", "calendar", "gmail", "daemon":
 			fmt.Printf("Command 'sync %s' is deprecated.\n", syncCommand)
 			fmt.Println("Google sync has been replaced by Charm KV sync.")
 			fmt.Println("Available sync commands:")
@@ -355,8 +367,11 @@ func main() {
 			fmt.Println("  sync status - Show sync status")
 			fmt.Println("  sync now    - Sync immediately")
 			fmt.Println("  sync auto   - Configure auto-sync")
+			fmt.Println("  sync repair - Repair database issues")
+			fmt.Println("  sync reset  - Reset local database")
 			fmt.Println("  sync unlink - Unlink device")
-			fmt.Println("  sync wipe   - Wipe all synced data")
+			fmt.Println("  sync wipe   - Wipe local data")
+			fmt.Println("  sync wipedb - Wipe all data (local + cloud)")
 			os.Exit(1)
 
 		// Legacy vault commands (deprecated)
@@ -365,13 +380,16 @@ func main() {
 			fmt.Println("  sync link   - Link this device")
 			fmt.Println("  sync status - Show sync status")
 			fmt.Println("  sync unlink - Unlink device")
-			fmt.Println("  sync wipe   - Wipe all data")
+			fmt.Println("  sync wipe   - Wipe local data")
+			fmt.Println("  sync wipedb - Wipe all data (local + cloud)")
+			fmt.Println("  sync reset  - Reset local database")
+			fmt.Println("  sync repair - Repair database")
 			fmt.Println("  sync now    - Sync immediately")
 			os.Exit(1)
 
 		default:
 			fmt.Printf("Unknown sync command: %s\n", syncCommand)
-			fmt.Println("Commands: link, status, unlink, wipe, now, auto")
+			fmt.Println("Commands: link, status, unlink, wipe, wipedb, reset, repair, now, auto")
 			os.Exit(1)
 		}
 
@@ -490,11 +508,22 @@ SYNC COMMANDS (Charm KV Cloud Sync):
 
   pagen sync auto <on|off>       Enable or disable auto-sync on write
 
+  pagen sync repair [--force]    Repair database issues
+                                 Checkpoints WAL, removes SHM, runs integrity check
+                                 Use --force to run full repair even if healthy
+
+  pagen sync reset               Reset local database (preserves cloud data)
+                                 Clears local database and re-syncs from cloud
+
   pagen sync unlink              Unlink this device from cloud sync
                                  Clears sync configuration but preserves local data
 
-  pagen sync wipe                Remove all synced data
-                                 WARNING: Deletes cloud data for this user
+  pagen sync wipe                Remove local synced data
+                                 WARNING: Deletes local database only
+
+  pagen sync wipedb              Remove ALL data (local + cloud)
+                                 WARNING: Permanently deletes cloud backups
+                                 Requires typing 'wipe' to confirm
 
 EXAMPLES:
   # Start MCP server for Claude Desktop
