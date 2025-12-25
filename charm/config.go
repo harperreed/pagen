@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/adrg/xdg"
+	"github.com/charmbracelet/charm/kv"
 )
 
 const (
@@ -29,13 +31,17 @@ type Config struct {
 
 	// AutoSync enables automatic sync after every write operation
 	AutoSync bool `json:"auto_sync"`
+
+	// StaleThreshold is the duration before data is considered stale and needs a sync
+	StaleThreshold time.Duration `json:"stale_threshold,omitempty"`
 }
 
 // DefaultConfig returns a new config with sensible defaults.
 func DefaultConfig() *Config {
 	return &Config{
-		Host:     DefaultCharmHost,
-		AutoSync: true,
+		Host:           DefaultCharmHost,
+		AutoSync:       true,
+		StaleThreshold: kv.DefaultStaleThreshold,
 	}
 }
 
@@ -73,6 +79,9 @@ func LoadConfig() (*Config, error) {
 	// Apply defaults for missing fields
 	if cfg.Host == "" {
 		cfg.Host = DefaultCharmHost
+	}
+	if cfg.StaleThreshold == 0 {
+		cfg.StaleThreshold = kv.DefaultStaleThreshold
 	}
 
 	return &cfg, nil

@@ -6,6 +6,7 @@ package charm
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/charmbracelet/charm/client"
 	"github.com/charmbracelet/charm/kv"
@@ -16,9 +17,10 @@ import (
 // Unlike the previous implementation, it does NOT hold a persistent connection.
 // Each operation opens the database, performs the operation, and closes it.
 type Client struct {
-	dbName     string
-	autoSync   bool
-	testClient *testClient // Used for testing without server dependency
+	dbName         string
+	autoSync       bool
+	staleThreshold time.Duration
+	testClient     *testClient // Used for testing without server dependency
 }
 
 // Option configures a Client.
@@ -53,8 +55,9 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 
 	c := &Client{
-		dbName:   AppName,
-		autoSync: cfg.AutoSync,
+		dbName:         AppName,
+		autoSync:       cfg.AutoSync,
+		staleThreshold: cfg.StaleThreshold,
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -66,6 +69,10 @@ func NewClient(opts ...Option) (*Client, error) {
 func (c *Client) Get(key []byte) ([]byte, error) {
 	if c.testClient != nil {
 		return c.testClient.Get(key)
+	}
+
+	if err := c.SyncIfStale(); err != nil {
+		return nil, err
 	}
 
 	var val []byte
@@ -117,6 +124,10 @@ func (c *Client) Keys() ([][]byte, error) {
 		return c.testClient.Keys()
 	}
 
+	if err := c.SyncIfStale(); err != nil {
+		return nil, err
+	}
+
 	var keys [][]byte
 	err := kv.DoReadOnly(c.dbName, func(k *kv.KV) error {
 		var err error
@@ -132,13 +143,22 @@ func (c *Client) KeysWithPrefix(prefix []byte) ([][]byte, error) {
 		return c.testClient.KeysWithPrefix(prefix)
 	}
 
-	allKeys, err := c.Keys()
+	if err := c.SyncIfStale(); err != nil {
+		return nil, err
+	}
+
+	var keys [][]byte
+	err := kv.DoReadOnly(c.dbName, func(k *kv.KV) error {
+		var err error
+		keys, err = k.Keys()
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	var matched [][]byte
-	for _, k := range allKeys {
+	for _, k := range keys {
 		if len(k) >= len(prefix) && string(k[:len(prefix)]) == string(prefix) {
 			matched = append(matched, k)
 		}
@@ -154,6 +174,11 @@ func (c *Client) DoReadOnly(fn func(k *kv.KV) error) error {
 		// This is okay because test code should use the individual methods
 		return fmt.Errorf("DoReadOnly not supported with test client")
 	}
+
+	if err := c.SyncIfStale(); err != nil {
+		return err
+	}
+
 	return kv.DoReadOnly(c.dbName, fn)
 }
 
@@ -182,6 +207,42 @@ func (c *Client) Sync() error {
 	}
 	return kv.Do(c.dbName, func(k *kv.KV) error {
 		return k.Sync()
+	})
+}
+
+// LastSyncTime returns the last time the database was synced with the server.
+func (c *Client) LastSyncTime() (time.Time, error) {
+	if c.testClient != nil {
+		return time.Now(), nil // Test client is always synced
+	}
+	var lastSync time.Time
+	err := kv.DoReadOnly(c.dbName, func(k *kv.KV) error {
+		lastSync = k.LastSyncTime()
+		return nil
+	})
+	return lastSync, err
+}
+
+// IsStale returns true if the database hasn't been synced within the stale threshold.
+func (c *Client) IsStale() (bool, error) {
+	if c.testClient != nil {
+		return false, nil // Test client is never stale
+	}
+	var isStale bool
+	err := kv.DoReadOnly(c.dbName, func(k *kv.KV) error {
+		isStale = k.IsStale(c.staleThreshold)
+		return nil
+	})
+	return isStale, err
+}
+
+// SyncIfStale syncs the database if it's stale.
+func (c *Client) SyncIfStale() error {
+	if c.testClient != nil {
+		return nil // No-op for test client
+	}
+	return kv.Do(c.dbName, func(k *kv.KV) error {
+		return k.SyncIfStale(c.staleThreshold)
 	})
 }
 
